@@ -7,6 +7,7 @@ set(EXE_TARGET_NAME epoll_server)
 
 set(LIBS
     jsoncpp
+    "${CMAKE_THREAD_LIBS_INIT}"
     )
 
 add_executable(${EXE_TARGET_NAME} ${SRCS})

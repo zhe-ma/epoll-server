@@ -1,0 +1,8 @@
+{
+  "log" : {
+    "level" : "debug",
+    "filename" : "log/epoll_server.log",
+    "rotateFileSize" : 5242880,
+    "rotateFileCount" : 10
+  }
+}
