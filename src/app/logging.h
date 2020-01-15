@@ -5,7 +5,7 @@
 
 #include "spdlog/spdlog.h"
 
-#define SPDLOG_TRACK_METHOD base::TrackMethodLog track_method_log(__FUNCTION__)
+#define SPDLOG_TRACK_METHOD app::TrackMethodLog track_method_log(__FUNCTION__)
 
 namespace app {
 
@@ -17,11 +17,11 @@ void InitLogging(const std::string& file_name, const std::string& level,
 class TrackMethodLog {
 public:
   explicit TrackMethodLog(const std::string& method) : method_(method) {
-    SPDLOG_INFO("Enter : {}()", method_);
+    SPDLOG_TRACE("Enter : {}()", method_);
   }
 
   ~TrackMethodLog() {
-    SPDLOG_INFO("Leave : {}()", method_);
+    SPDLOG_TRACE("Leave : {}()", method_);
   }
 
 private:

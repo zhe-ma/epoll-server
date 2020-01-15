@@ -1,5 +1,7 @@
 #include "app/logging.h"
 
+#include <memory>
+
 #include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
@@ -35,16 +37,20 @@ static spdlog::level::level_enum GetLogLevel(const std::string& level_name) {
 
 void InitLogging(const std::string& file_name, const std::string& level,
                  std::size_t rotate_size, std::size_t rotate_count) {
-  auto file_logger = spdlog::rotating_logger_mt("file_logger", file_name,
-                                                rotate_size, rotate_count);
-  file_logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e %z] [T:%-5t] [P:%-5P] "
-                           "[%-5l] [%=30@] %v");
+  using namespace spdlog::sinks;
 
-  auto log_level = GetLogLevel(level);
-  file_logger->set_level(log_level);
-  file_logger->flush_on(log_level);
+  auto file_sink = std::make_shared<rotating_file_sink_mt>(file_name, rotate_size, rotate_count);
+  file_sink->set_level(GetLogLevel(level));
 
-  spdlog::set_default_logger(file_logger);
+  auto stderr_sink = std::make_shared<stderr_color_sink_mt>();
+  stderr_sink->set_level(spdlog::level::critical);
+
+  auto logger = std::make_shared<spdlog::logger>("logger", spdlog::sinks_init_list{file_sink, stderr_sink});
+  logger->set_level(spdlog::level::trace);
+  logger->flush_on(GetLogLevel(level));
+  logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e %z] [T:%-5t] [P:%-5P] [%-5l] [%=30@] %v");
+
+  spdlog::set_default_logger(logger);
 }
 
 }  // namespace app

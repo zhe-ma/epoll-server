@@ -14,8 +14,5 @@ int main() {
   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
               CONFIG.log_rotate_count);
 
-  SPDLOG_DEBUG("level: {}", CONFIG.log_level);
-  SPDLOG_DEBUG("rotate size: {}", CONFIG.log_rotate_size);
-
   return 0;
 }
