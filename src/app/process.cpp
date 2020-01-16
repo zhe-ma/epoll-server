@@ -13,7 +13,7 @@ static size_t s_environ_size = 0;
 static size_t s_argv_size = 0;
 static std::unique_ptr<char[]> s_backup_environ;
 
-bool SetProcessName(const std::string& name) {
+void BackupEnviron() {
   for (size_t i = 0; environ[i] != nullptr; ++i) {
     s_environ_size += strlen(environ[i]) + 1;
   }
@@ -31,27 +31,27 @@ bool SetProcessName(const std::string& name) {
     p += len;
   }
 
-  size_t argv_len = 0;
-  for (size_t i = 0; argv[i] != nullptr ; i++) {
-    argv_len += strlen(argv[i]) + 1;
+  for (size_t i = 0; g_argv[i] != nullptr ; i++) {
+    s_argv_size += strlen(g_argv[i]) + 1;
   }
+}
 
-  size_t max_name_len = argv_len + environ_len;
-  if (name.size() >= max_name_len) {
+bool SetProcessTitle(const std::string& title) {
+  size_t max_name_size = s_environ_size + s_argv_size;
+  if (title.size() >= max_name_size) {
     return false;
   }
 
-    argv[1] = NULL;
+  g_argv[1] = NULL;
 
-    char *p = argv[0];
-    strcpy(p,name.c_str());
-    ptmp += ititlelen; //跳过标题
+  char* p = g_argv[0];
+  strcpy(p, title.c_str());
+  p += title.size();
 
-    //(5)把剩余的原argv以及environ所占的内存全部清0，否则会出现在ps的cmd列可能还会残余一些没有被覆盖的内容；
-    size_t cha = esy - ititlelen;  //内存总和减去标题字符串长度(不含字符串末尾的\0)，剩余的大小，就是要memset的；
-    memset(ptmp,0,cha);  
-    return;
+  size_t left_size = max_name_size - title.size();
+  memset(p, 0, left_size);
+
+  return true;
 }
-
 
 }  // namespace app

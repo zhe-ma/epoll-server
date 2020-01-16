@@ -7,7 +7,8 @@ namespace app {
 
 extern char** g_argv;
 
-bool SetProcessName(const std::string& name);
+void BackupEnviron();
+bool SetProcessTitle(const std::string& title);
 
 }  // namespace app
 

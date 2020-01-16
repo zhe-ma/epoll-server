@@ -2,7 +2,8 @@
 
 #include "app/config.h"
 #include "app/logging.h"
-#include "server.h"
+#include "app/process.h"
+#include "app/server.h"
 
 using namespace app;
 
@@ -16,12 +17,16 @@ int main(int argc, char* const*argv) {
     return -1;
   }
 
+  g_argv = (char**)argv;
+  BackupEnviron();
+
   // Init logging.
   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
               CONFIG.log_rotate_count);
 
-  // StartServer();
+  SetProcessTitle("App Server");
 
+  StartServer();
 
   return 0;
 }
