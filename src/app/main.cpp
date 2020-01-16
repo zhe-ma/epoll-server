@@ -17,16 +17,17 @@ int main(int argc, char* const*argv) {
     return -1;
   }
 
+  // Backup environ and argv.
   g_argv = (char**)argv;
+  g_argc = argc;
   BackupEnviron();
 
   // Init logging.
   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
               CONFIG.log_rotate_count);
 
-  SetProcessTitle("App Server");
-
-  StartServer();
+  Server server;
+  server.Start(CONFIG.process_worker_count);
 
   return 0;
 }

@@ -4,5 +4,10 @@
     "filename" : "log/epoll_server.log",
     "rotateFileSize" : 5242880,
     "rotateFileCount" : 10
+  },
+
+  "process" : {
+    "workerCount" : 3,
+    "daemonMode" : false
   }
 }

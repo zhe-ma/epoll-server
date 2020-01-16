@@ -6,6 +6,7 @@
 namespace app {
 
 extern char** g_argv;
+extern int g_argc;
 
 void BackupEnviron();
 bool SetProcessTitle(const std::string& title);

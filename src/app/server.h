@@ -1,9 +1,17 @@
 #ifndef APP_SERVER_H_
 #define APP_SERVER_H_
 
+#include <string>
+
 namespace app {
 
-void StartServer();
+class Server {
+public:
+  Server() = default;
+  ~Server() = default;
+
+  void Start(std::size_t worker_count);
+};
 
 }  // namespace app
 

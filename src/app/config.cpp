@@ -16,6 +16,10 @@ bool Config::Load(const std::string& file_path, std::string* error_msg) {
   log_rotate_size = log_config["rotateFileSize"].asUInt();
   log_rotate_count = log_config["rotateFileCount"].asUInt();
 
+  const Json::Value& process_config = config["process"];
+  process_worker_count = process_config["workerCount"].asUInt();
+  deamon_mode = process_config["daemonMode"].asBool();
+
   return true;
 }
 

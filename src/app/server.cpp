@@ -1,43 +1,68 @@
 #include "app/server.h"
 
-#include <iostream>
-
-#include <string.h>
 #include <unistd.h>
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include <iostream>
+
+#include "app/logging.h"
+#include "app/process.h"
 
 namespace app {
 
-void StartServer() {
-  int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+namespace {
 
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
+const std::string& kMasterProcessTitle = "master process";
+const std::string& kWorkerProcessTitle = "worker process";
 
-  addr.sin_family = AF_INET;  // IPV4
-  addr.sin_port = htons(9004);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+void StartWorkerProcesses(std::size_t worker_count) {
+  SPDLOG_TRACK_METHOD;
 
-  bind(socket_fd, (sockaddr*)&addr, sizeof(addr));
-  listen(socket_fd, 32);
+  for (size_t i = 0; i < worker_count; ++i) {
+    pid_t pid = fork();
 
-  int conn_fd = -1;
-  const char* kHello = "Hello!";
-  for (size_t i = 0; i < 1; ++i) {
-    conn_fd = accept(socket_fd, (sockaddr*)nullptr, nullptr);
+    // Fork error.
+    if (pid == -1) {
+      SPDLOG_ERROR("Failed to fork worker process.");
+      continue;
+    };
 
-    char buf[1000 + 1] = {0};
-    read(conn_fd, buf, 1000);
-    std::cout << buf <<std::endl;
-    
-    write(conn_fd, kHello, sizeof(kHello));
-    close(conn_fd);
+    // "pid == 0": Child process will enter the branch.
+    // Parent process will continue to fork the next child process.
+    if (pid == 0) {
+      pid_t child_pid = getpid();
+      SPDLOG_DEBUG("Fork a new child process. PID: {}.", child_pid);
+
+      SetProcessTitle(kWorkerProcessTitle);
+
+      // The handling of child process.
+      for (;;) {
+        std::cout << "I'm child: " << child_pid << std::endl;
+        sleep(3);
+      }
+    }
   }
+}
 
-  close(socket_fd);
+} // namespace
+
+void Server::Start(std::size_t worker_count) {
+  SPDLOG_TRACK_METHOD;
+
+  // Set title for master process.
+  std::string title = kMasterProcessTitle;
+  for (int i = 0; i < g_argc; ++i) {
+    title += std::string(" ") + g_argv[i];
+  }
+  SetProcessTitle(title);
+  SPDLOG_DEBUG("The title of master process: {}.", title);
+
+  StartWorkerProcesses(worker_count);
+
+  // The handling of master process.
+  for (;;) {
+    std::cout << "I'm parent: " << getpid() << std::endl;
+    sleep(3);
+  }
 }
 
 }  // namespace app

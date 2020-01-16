@@ -18,10 +18,15 @@ private:
   friend class SingletonBase<Config>;
 
 public:
+  // Log config.
   std::string log_filename;
   std::string log_level;
   std::size_t log_rotate_count;
   std::size_t log_rotate_size;
+
+  // Process config.
+  std::size_t process_worker_count;
+  bool deamon_mode;
 };
 
 }  // namespace app
