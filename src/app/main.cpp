@@ -20,7 +20,7 @@ int main(int argc, char* const*argv) {
   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
               CONFIG.log_rotate_count);
 
-  StartServer();
+  // StartServer();
 
 
   return 0;
