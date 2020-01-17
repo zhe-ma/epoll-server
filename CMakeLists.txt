@@ -18,6 +18,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+add_definitions(-DSPDLOG_COMPILED_LIB)
 add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 add_definitions(-DSPDLOG_LEVEL_NAMES={\"TRACE\",\"DEBUG\",\"INFO\",\"WARN\",\"ERROR\",\"FATAL\",\"OFF\"})
 
@@ -28,9 +29,13 @@ include_directories(
 
 set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party)
 include_directories(${THIRD_PARTY_DIR})
+include_directories(${THIRD_PARTY_DIR}/spdlog)
+
+
 
 add_subdirectory(${THIRD_PARTY_DIR}/jsoncpp)
 add_subdirectory(${THIRD_PARTY_DIR}/gtest)
+add_subdirectory(${THIRD_PARTY_DIR}/spdlog)
 
 # add_subdirectory(src/unittest)
 add_subdirectory(src/app)

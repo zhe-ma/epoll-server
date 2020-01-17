@@ -7,6 +7,7 @@ set(EXE_TARGET_NAME epoll_server)
 
 set(LIBS
     jsoncpp
+    spdlog
     "${CMAKE_THREAD_LIBS_INIT}"
     )
 
