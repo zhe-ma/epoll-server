@@ -10,7 +10,7 @@ public:
   Server() = default;
   ~Server() = default;
 
-  void Start(std::size_t worker_count);
+  bool Start(std::size_t worker_count);
 };
 
 }  // namespace app
