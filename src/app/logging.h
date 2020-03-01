@@ -17,11 +17,11 @@ void InitLogging(const std::string& file_name, const std::string& level,
 class TrackMethodLog {
 public:
   explicit TrackMethodLog(const std::string& method) : method_(method) {
-    SPDLOG_TRACE("Enter : {}()", method_);
+    SPDLOG_TRACE("<Enter> : {}()", method_);
   }
 
   ~TrackMethodLog() {
-    SPDLOG_TRACE("Leave : {}()", method_);
+    SPDLOG_TRACE("<Leave> : {}()", method_);
   }
 
 private:

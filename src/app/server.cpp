@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 #include <iostream>
 
@@ -68,9 +69,7 @@ struct SignalAction {
   void (*handler)(int signo, siginfo_t* siginfo, void* ucontext);
 };
 
-void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext) {
-  std::cout << "Signal: " << signo << std::endl;
-}
+void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext);
 
 const SignalAction kSignalActions[] = {
   { SIGHUP, "SIGHUP", SignalHandler },  // 终止进程，终端线路挂断。
@@ -81,6 +80,61 @@ const SignalAction kSignalActions[] = {
   { SIGIO, "SIGIO", SignalHandler },  // 通用异步I/O信号。
   { SIGSYS, "SIGSYS", nullptr },  // 非法的系统调用。忽略该信号，防止进程被操作系统杀掉。
 };
+
+std::string GetSignalName(int signo) {
+  for (const auto& sig_action : kSignalActions) {
+    if (signo == sig_action.signo) {
+      return sig_action.signo_name;
+    }
+  }
+
+  return "";
+}
+
+void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext) {
+  SPDLOG_TRACK_METHOD;
+
+  SPDLOG_DEBUG("Signal: {}, Name: {}.", signo, GetSignalName(signo));
+
+  // siginfo->si_pid 发送该信号的进程ID。
+  if (siginfo != nullptr) {
+    SPDLOG_DEBUG("Received signal [{}, {}] from PID [{}].", signo, GetSignalName(signo), siginfo->si_pid);
+  }
+
+  // 当子进程死掉的时候，父进程会收到SIGCHLD信号。父进程需要调用wait或waitpid
+  // 来防止子进程变成僵尸进程。
+  if (signo == SIGCHLD) {
+    bool once = false;
+    for ( ; ; ) {
+      int status = 0;
+
+      // -1 : 等待任何子进程。
+      // status :  返回子进程的状态信息。
+      // WNOHANG : 非阻塞。
+      pid_t pid = waitpid(-1, &status, WNOHANG);
+
+      // 没有子进程结束。
+      if (pid == 0) {
+        SPDLOG_DEBUG("No child process exits.");
+        return;
+      }
+
+      // waitpid有错误返回。
+      if (pid == -1) {
+        SPDLOG_WARN("Failed to waitpid. Error: {}.", errno);
+        return;
+      }
+
+      // waitpid成功。
+      if (WTERMSIG(status) > 0) {  // 获取使子进程终止的信号编号。
+        SPDLOG_DEBUG("Child process [PID : {}] exited on signal [{}].", pid, WTERMSIG(status));
+      } else {  // 获取子进程终止的返回值。
+        // WEXITSTATUS()获取子进程传递给exit或者_exit参数的低八位。
+        SPDLOG_DEBUG("Child process [PID : {}] exited with error code [{}].", pid, WEXITSTATUS(status));
+      }
+    }
+  }
+}
 
 bool InitSignals() {
   SPDLOG_TRACK_METHOD;
@@ -105,6 +159,8 @@ bool InitSignals() {
       SPDLOG_CRITICAL("Failed to sigaction: {}.", signal_action.signo_name);
       return false;
     }
+
+    SPDLOG_DEBUG("Sigaction signal {} successfully!", signal_action.signo_name);
   }
 
   return true;
