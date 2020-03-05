@@ -1,7 +1,7 @@
 #ifndef APP_SERVER_H_
 #define APP_SERVER_H_
 
-#include <string>
+#include "app/socket.h"
 
 namespace app {
 
@@ -10,7 +10,10 @@ public:
   Server() = default;
   ~Server() = default;
 
-  bool Start(std::size_t worker_count);
+  bool Start();
+
+private:
+  Socket socket_;
 };
 
 }  // namespace app

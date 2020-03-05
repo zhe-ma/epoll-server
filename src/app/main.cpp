@@ -6,7 +6,9 @@
 #include "app/server.h"
 
 using namespace app;
+
 // ps -eo pid,ppid,sid,tty,pgrp,comm,stat,cmd | grep -E 'bash|PID|epoll_server'
+// netstat -anp | grep -E 'State|9000'
 
 int main(int argc, char* const*argv) {
   // Load configuration.
@@ -30,11 +32,11 @@ int main(int argc, char* const*argv) {
     // Daemon process.
     if (CreateDaemonProcess() == 0) {
       Server server;
-      server.Start(CONFIG.process_worker_count);
+      server.Start();
     }
   } else {
     Server server;
-    server.Start(CONFIG.process_worker_count);
+    server.Start();
   }
 
   return 0;

@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include "app/config.h"
 #include "app/logging.h"
 #include "app/process.h"
 
@@ -16,10 +17,10 @@ namespace {
 const std::string& kMasterProcessTitle = "master process";
 const std::string& kWorkerProcessTitle = "worker process";
 
-void StartWorkerProcesses(std::size_t worker_count) {
+void StartWorkerProcesses() {
   SPDLOG_TRACK_METHOD;
 
-  for (size_t i = 0; i < worker_count; ++i) {
+  for (size_t i = 0; i < CONFIG.process_worker_count; ++i) {
     pid_t pid = fork();
 
     // Fork error.
@@ -187,7 +188,7 @@ void BlockMasterProcessSignals() {
 
 } // namespace
 
-bool Server::Start(std::size_t worker_count) {
+bool Server::Start() {
   SPDLOG_TRACK_METHOD;
 
   SetMasterProcessTitle();
@@ -198,10 +199,16 @@ bool Server::Start(std::size_t worker_count) {
 
   SPDLOG_DEBUG("Init signals sucessfully.");
 
+  if (!socket_.Listen(CONFIG.port)) {
+    return false;
+  }
+
+  SPDLOG_DEBUG("Init socket sucessfully.");
+
   // Block signals before call fork().
   BlockMasterProcessSignals();
 
-  StartWorkerProcesses(worker_count);
+  StartWorkerProcesses();
 
   sigset_t set;
   sigemptyset(&set);

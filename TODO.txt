@@ -1,3 +1,4 @@
 1. 父进程可以重新创建新的子进程。
 2. 测试SignalHandler。
 3. 测试
+4. InitSignal和CreateDaemon的调用顺序

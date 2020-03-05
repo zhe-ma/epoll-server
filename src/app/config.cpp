@@ -20,6 +20,9 @@ bool Config::Load(const std::string& file_path, std::string* error_msg) {
   process_worker_count = process_config["workerCount"].asUInt();
   deamon_mode = process_config["daemonMode"].asBool();
 
+  const Json::Value& socket_config = config["socket"];
+  port = static_cast<std::uint16_t>(socket_config["port"].asUInt());
+
   return true;
 }
 

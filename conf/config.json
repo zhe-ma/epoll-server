@@ -9,5 +9,9 @@
   "process" : {
     "workerCount" : 3,
     "daemonMode" : false
+  },
+
+  "socket" : {
+    "port": 9000
   }
 }

@@ -27,6 +27,9 @@ public:
   // Process config.
   std::size_t process_worker_count;
   bool deamon_mode;
+
+  // Socket config.
+  std::uint16_t port;
 };
 
 }  // namespace app
