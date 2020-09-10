@@ -1,19 +1,24 @@
 #ifndef APP_SERVER_H_
 #define APP_SERVER_H_
 
-#include "app/socket.h"
-
 namespace app {
 
 class Server {
 public:
-  Server() = default;
+  explicit Server(unsigned short port);
+
   ~Server() = default;
 
   bool Start();
 
 private:
-  Socket socket_;
+  bool Listen();
+
+private:
+  unsigned short port_;
+
+  int listen_fd_;
+
 };
 
 }  // namespace app

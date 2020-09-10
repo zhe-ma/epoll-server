@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <unistd.h>
+
 #include "app/config.h"
 #include "app/logging.h"
 #include "app/process.h"
@@ -18,26 +20,33 @@ int main(int argc, char* const*argv) {
     return -1;
   }
 
-  // Backup environ and argv.
-  g_argv = (char**)argv;
-  g_argc = argc;
-  BackupEnviron();
-
   // Init logging.
   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
               CONFIG.log_rotate_count);
   SPDLOG_DEBUG("==========================================================");
 
-  if (CONFIG.deamon_mode) {
-    // Daemon process.
-    if (CreateDaemonProcess() == 0) {
-      Server server;
-      server.Start();
-    }
-  } else {
-    Server server;
-    server.Start();
+  Server server(9005);
+  server.Start();
+
+  for (size_t i = 0; i < 20; i++) {
+    sleep(1);
   }
+
+  // // Backup environ and argv.
+  // g_argv = (char**)argv;
+  // g_argc = argc;
+  // BackupEnviron();
+
+  // if (CONFIG.deamon_mode) {
+  //   // Daemon process.
+  //   if (CreateDaemonProcess() == 0) {
+  //     Server server;
+  //     server.Start();
+  //   }
+  // } else {
+  //   Server server;
+  //   server.Start();
+  // }
 
   return 0;
 }
