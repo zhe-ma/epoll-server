@@ -7,8 +7,15 @@ class Connection {
 public:
   Connection(int socket_fd);
 
+  int socket_fd() const {
+    return socket_fd_;
+  }
+
+  void HandleRead();
+  void HandleWrite();
+
 private:
-  int fd_;
+  int socket_fd_;
 };
 
 }  // namespace app

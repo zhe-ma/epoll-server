@@ -28,10 +28,6 @@ int main(int argc, char* const*argv) {
   Server server(9005);
   server.Start();
 
-  for (size_t i = 0; i < 20; i++) {
-    sleep(1);
-  }
-
   // // Backup environ and argv.
   // g_argv = (char**)argv;
   // g_argc = argc;

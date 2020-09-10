@@ -31,8 +31,6 @@ set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party)
 include_directories(${THIRD_PARTY_DIR})
 include_directories(${THIRD_PARTY_DIR}/spdlog)
 
-
-
 add_subdirectory(${THIRD_PARTY_DIR}/jsoncpp)
 add_subdirectory(${THIRD_PARTY_DIR}/gtest)
 add_subdirectory(${THIRD_PARTY_DIR}/spdlog)
