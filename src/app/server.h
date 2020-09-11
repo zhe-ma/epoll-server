@@ -24,6 +24,8 @@ private:
 
   bool PollOnce(int waiting_ms);
 
+  void HandleAccept();
+
 private:
   unsigned short port_;
 

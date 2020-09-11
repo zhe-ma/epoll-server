@@ -60,7 +60,7 @@ bool Server::Listen() {
     return false;
   }
 
-  // 设置为非阻塞模式。
+  // 设置为非阻塞模式，防止accept时阻塞太久。
   if (!sock::SetNonBlocking(listen_fd_)) {
     SPDLOG_ERROR("Faild to set socket to be non-blocking.");
     return false;
@@ -167,5 +167,24 @@ bool Server::PollOnce(int waiting_ms) {
   }
 }
 
+void Server::HandleAccept() {
+  if (listen_fd_ <= 0) {
+    SPDLOG_CRITICAL("The listening socket fd is reset to {}.", listen_fd_);
+    return;
+  }
+  
+  struct sockaddr sock_addr;
+  memset(&sock_addr, 0, sizeof(sock_addr));
+  socklen_t sock_len = sizeof(sock_addr);
+
+  // 将listen socket设置为非阻塞，防止该函数阻塞太久。
+  int fd = accept(listen_fd_, &sock_addr, &sock_len);
+  if (fd == -1) {
+
+  } 
+}
 
 }  // namespace app
+
+
+    // 是提示再试一次。这个错误经常出现在当应用程序进行一些非阻塞(non-blocking)操作(对文件或socket)的时候。例如，以 O_NONBLOCK的标志打开文件/socket/FIFO，如果你连续做read操作而没有数据可读。此时程序不会阻塞起来等待数据准备就绪返回，read函数会返回一个错误EAGAIN，提示你的应用程序现在没有数据可读请稍后再试。
