@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
+#include <sys/fcntl.h>
 
 #include "app/logging.h"
 
@@ -14,6 +15,16 @@ namespace sock {
 bool SetNonBlocking(int fd) {
   int non_blocking = 1;
   int ret = ioctl(fd, FIONBIO, &non_blocking);
+  if (ret == -1) {
+    return false;
+  }
+
+  return true;
+}
+
+bool SetClosexc(int fd) {
+  int ret = fcntl(fd, F_GETFD);
+  ret = fcntl(fd, F_SETFD, ret | FD_CLOEXEC);
   if (ret == -1) {
     return false;
   }

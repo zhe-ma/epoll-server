@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <sys/errno.h>
 
 #include "app/logging.h"
@@ -38,10 +39,15 @@ bool Server::Start() {
   }
 
   Connection* conn = new Connection(listen_fd_);
+  conn->set_read_hander([this]() { HandleAccept(); });
+
   if (!UpdateEpollEvent(listen_fd_, conn, EPOLL_CTL_ADD, true, false)) {
+    delete conn;
+    conn = nullptr;
     return false;
   }
 
+  // TODO: delete conn.
   for (;;) {
     if (!PollOnce(-1)) {
       return false;
@@ -173,18 +179,62 @@ void Server::HandleAccept() {
     return;
   }
   
-  struct sockaddr sock_addr;
+  struct sockaddr_in sock_addr;
   memset(&sock_addr, 0, sizeof(sock_addr));
   socklen_t sock_len = sizeof(sock_addr);
 
   // 将listen socket设置为非阻塞，防止该函数阻塞太久。
-  int fd = accept(listen_fd_, &sock_addr, &sock_len);
+  int fd = accept(listen_fd_, (struct sockaddr*)&sock_addr, &sock_len);
   if (fd == -1) {
+    int err = errno;
 
-  } 
+    // EAGAIN是提示再试一次。这个错误经常出现在当应用程序进行一些非阻塞操作。
+    // 如果read操作而没有数据可读，此时程序不会阻塞起来等待数据准备就绪返回，
+    // read函数会返回一个错误EAGAIN，提示现在没有数据可读请稍后再试。
+    if (err == EAGAIN || err == EINTR) {
+      return;
+    }
+
+    SPDLOG_WARN("Failed to accept socket. Error: {}-{}.", err, strerror(err));
+    return;
+  }
+
+  char remote_ip[30] = { 0 };
+  inet_ntop(AF_INET,&sock_addr.sin_addr, remote_ip, sizeof(remote_ip));
+  unsigned short remote_port = ntohs(sock_addr.sin_port);
+
+  SPDLOG_TRACE("Accept socket. Remote addr: {}:{}.", remote_ip, remote_port);
+
+  if (!sock::SetNonBlocking(fd)) {
+    SPDLOG_WARN("Failed to SetNonBlocking. Remote addr: {}:{}.", remote_ip, remote_port);
+    close(fd);
+    return;
+  }
+
+  if (!sock::SetClosexc(fd)) {
+    SPDLOG_WARN("Failed to SetClosexc. Remote addr: {}:{}.", remote_ip, remote_port);
+    close(fd);
+    return;
+  }
+
+  Connection* conn = new Connection(listen_fd_);
+  conn->set_remote_ip(remote_ip);
+  conn->set_remote_port(remote_port);
+  conn->set_read_hander([this]() { HandleRead(); });
+
+  if (!UpdateEpollEvent(fd, conn, EPOLL_CTL_ADD, true, false)) {
+    SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
+    close(fd);
+    delete conn;
+    return;
+  }
+
+  // Add to conn poll.
+
+}
+
+void Server::HandleRead() {
+  SPDLOG_DEBUG("Handle read");
 }
 
 }  // namespace app
-
-
-    // 是提示再试一次。这个错误经常出现在当应用程序进行一些非阻塞(non-blocking)操作(对文件或socket)的时候。例如，以 O_NONBLOCK的标志打开文件/socket/FIFO，如果你连续做read操作而没有数据可读。此时程序不会阻塞起来等待数据准备就绪返回，read函数会返回一个错误EAGAIN，提示你的应用程序现在没有数据可读请稍后再试。

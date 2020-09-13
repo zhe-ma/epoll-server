@@ -5,15 +5,16 @@
 namespace app {
 
 Connection::Connection(int socket_fd)
-    : socket_fd_(socket_fd) {
+    : socket_fd_(socket_fd)
+    , remote_port_(-1) {
 }
 
 void Connection::HandleRead() {
-  SPDLOG_DEBUG("Handle read");
+  read_handler_();  
 }
 
 void Connection::HandleWrite() {
-  SPDLOG_DEBUG("Handle write");
+  write_handler_();
 }
 
 }  // namespace app

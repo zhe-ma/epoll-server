@@ -7,10 +7,12 @@ namespace sock {
 
 bool SetNonBlocking(int fd);
 
+bool SetClosexc(int fd);
+
 bool Bind(int fd, unsigned short port);
 
 bool SetReuseAddr(int fd);
-  
+
 }  // namespace sock
 
 }  // namespace app
