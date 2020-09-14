@@ -17,15 +17,12 @@ public:
 
   bool Start();
 
+  bool UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write);
+
 private:
   bool Listen();
 
-  bool UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write);
-
   bool PollOnce(int waiting_ms);
-
-  void HandleAccept();
-  void HandleRead();
 
 private:
   unsigned short port_;

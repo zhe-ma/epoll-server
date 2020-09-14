@@ -63,7 +63,23 @@ bool SetReuseAddr(int fd) {
 
   return true;
 }
-  
+
 }  // namespace sock
+
+std::uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
+  if (byte_order == kLittleEndian) {
+    return bytes[0] | bytes[1] << 8;
+  }
+
+  return bytes[1] | bytes[0] << 8;
+}
+
+std::uint32_t BytesToUint32(ByteOrder byte_order, char bytes[4]) {
+  if (byte_order == kLittleEndian) {
+    return bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 16;
+  }
+
+  return bytes[3] | bytes[2] << 8 | bytes[1] << 16 | bytes[0] << 16;
+}
 
 }  // app

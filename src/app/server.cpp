@@ -38,8 +38,8 @@ bool Server::Start() {
     return false;
   }
 
-  Connection* conn = new Connection(listen_fd_);
-  conn->set_read_hander([this]() { HandleAccept(); });
+  Connection* conn = new Connection(listen_fd_, this);
+  conn->set_is_listen_socket(true);
 
   if (!UpdateEpollEvent(listen_fd_, conn, EPOLL_CTL_ADD, true, false)) {
     delete conn;
@@ -52,6 +52,32 @@ bool Server::Start() {
     if (!PollOnce(-1)) {
       return false;
     }
+  }
+
+  return true;
+}
+
+// EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。
+// EPOLLOUT: socket可以写。
+// EPOLLPRI: socket紧急的数据(带外数据到来)可读。
+// EPOLLERR: 客户端socket发生错误, 断电之类的断开，server端并不会在这种情况收到该事件。
+// EPOLLRDHUP: 读关闭，2.6.17之后版本内核，对端连接断开(close()，kill，ctrl+c)触发的epoll事件会包含EPOLLIN|EPOLLRDHUP。
+// EPOLLHUP: 读写都关闭
+// EPOLLET: 将EPOLL设为边缘触发(Edge Triggered)模式。
+bool Server::UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write) {
+  struct epoll_event ev;
+  memset(&ev, 0, sizeof(ev));
+ 
+  if (read) {
+   ev.events = EPOLLIN|EPOLLRDHUP;
+  } else if(write) {
+  }
+  
+  ev.data.ptr = conn;
+
+  if(epoll_ctl(epoll_fd_, event_type, socket_fd,&ev) == -1) {
+    SPDLOG_ERROR("Failed to update epoll events. Error:{}-{}。", errno, strerror(errno));
+    return false;
   }
 
   return true;
@@ -80,32 +106,6 @@ bool Server::Listen() {
   const int kListenBacklog = 511;
   if (listen(listen_fd_, kListenBacklog) == -1) {
     SPDLOG_ERROR("Failed to listen.");
-    return false;
-  }
-
-  return true;
-}
-
-// EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。
-// EPOLLOUT: socket可以写。
-// EPOLLPRI: socket紧急的数据(带外数据到来)可读。
-// EPOLLERR: 客户端socket发生错误, 断电之类的断开，server端并不会在这种情况收到该事件。
-// EPOLLRDHUP: 读关闭，2.6.17之后版本内核，对端连接断开(close()，kill，ctrl+c)触发的epoll事件会包含EPOLLIN|EPOLLRDHUP。
-// EPOLLHUP: 读写都关闭
-// EPOLLET: 将EPOLL设为边缘触发(Edge Triggered)模式。
-bool Server::UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write) {
-  struct epoll_event ev;
-  memset(&ev, 0, sizeof(ev));
- 
-  if (read) {
-   ev.events = EPOLLIN|EPOLLRDHUP;
-  } else if(write) {
-  }
-  
-  ev.data.ptr = conn;
-
-  if(epoll_ctl(epoll_fd_, event_type, socket_fd,&ev) == -1) {
-    SPDLOG_ERROR("Failed to update epoll events. Error:{}-{}。", errno, strerror(errno));
     return false;
   }
 
@@ -171,70 +171,6 @@ bool Server::PollOnce(int waiting_ms) {
       continue;
     }
   }
-}
-
-void Server::HandleAccept() {
-  if (listen_fd_ <= 0) {
-    SPDLOG_CRITICAL("The listening socket fd is reset to {}.", listen_fd_);
-    return;
-  }
-  
-  struct sockaddr_in sock_addr;
-  memset(&sock_addr, 0, sizeof(sock_addr));
-  socklen_t sock_len = sizeof(sock_addr);
-
-  // 将listen socket设置为非阻塞，防止该函数阻塞太久。
-  int fd = accept(listen_fd_, (struct sockaddr*)&sock_addr, &sock_len);
-  if (fd == -1) {
-    int err = errno;
-
-    // EAGAIN是提示再试一次。这个错误经常出现在当应用程序进行一些非阻塞操作。
-    // 如果read操作而没有数据可读，此时程序不会阻塞起来等待数据准备就绪返回，
-    // read函数会返回一个错误EAGAIN，提示现在没有数据可读请稍后再试。
-    if (err == EAGAIN || err == EINTR) {
-      return;
-    }
-
-    SPDLOG_WARN("Failed to accept socket. Error: {}-{}.", err, strerror(err));
-    return;
-  }
-
-  char remote_ip[30] = { 0 };
-  inet_ntop(AF_INET,&sock_addr.sin_addr, remote_ip, sizeof(remote_ip));
-  unsigned short remote_port = ntohs(sock_addr.sin_port);
-
-  SPDLOG_TRACE("Accept socket. Remote addr: {}:{}.", remote_ip, remote_port);
-
-  if (!sock::SetNonBlocking(fd)) {
-    SPDLOG_WARN("Failed to SetNonBlocking. Remote addr: {}:{}.", remote_ip, remote_port);
-    close(fd);
-    return;
-  }
-
-  if (!sock::SetClosexc(fd)) {
-    SPDLOG_WARN("Failed to SetClosexc. Remote addr: {}:{}.", remote_ip, remote_port);
-    close(fd);
-    return;
-  }
-
-  Connection* conn = new Connection(listen_fd_);
-  conn->set_remote_ip(remote_ip);
-  conn->set_remote_port(remote_port);
-  conn->set_read_hander([this]() { HandleRead(); });
-
-  if (!UpdateEpollEvent(fd, conn, EPOLL_CTL_ADD, true, false)) {
-    SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
-    close(fd);
-    delete conn;
-    return;
-  }
-
-  // Add to conn poll.
-
-}
-
-void Server::HandleRead() {
-  SPDLOG_DEBUG("Handle read");
 }
 
 }  // namespace app

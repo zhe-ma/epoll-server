@@ -4,14 +4,20 @@
 #include <string>
 #include <functional>
 
+#include "app/server.h"
+
 namespace app {
 
 class Connection {
 public:
-  Connection(int socket_fd);
+  Connection(int socket_fd, Server* server);
 
   int socket_fd() const {
     return socket_fd_;
+  }
+
+  void set_is_listen_socket(bool is_listen_socket) {
+    is_listen_socket_ = is_listen_socket;
   }
 
   void set_remote_ip(const std::string& remote_ip) {
@@ -30,25 +36,29 @@ public:
     return remote_port_;
   }
 
-  void set_read_hander(const std::function<void()>& read_handler) {
-    read_handler_ = read_handler;
-  }
-
-  void set_write_hander(const std::function<void()>& write_handler) {
-    write_handler_ = write_handler;
-  }
-
   void HandleRead();
   void HandleWrite();
 
 private:
+  void DoRead();
+  void DoAccept();
+
+  int Recv(char* buf, size_t buf_len);
+
+private:
+  Server* server_;
+
   int socket_fd_;
+  bool is_listen_socket_;
 
   std::string remote_ip_;
   unsigned short remote_port_;
 
-  std::function<void()> read_handler_;
-  std::function<void()> write_handler_;
+  std::string recv_header_;
+  size_t recv_header_len_;
+
+  std::string recv_data_;
+  size_t recv_data_len_;
 };
 
 }  // namespace app

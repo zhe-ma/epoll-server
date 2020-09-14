@@ -5,8 +5,9 @@
 
 namespace app {
 
-// Message = header + body.
+// Message = Header + Body.
 // Header = DataLength + MsgCode + Crc32.
+// Message Bytes = DataLen(LittleEndian) + MsgCode(LittleEndian) + Data.
 
 struct Message {
   std::uint16_t data_len;  // 数据长度。
@@ -18,10 +19,8 @@ struct Message {
   // HeaderLen = sizeof(data_len) + sizeof(code) + sizeof(crc32)
   const static std::uint16_t kHeaderLen = 8;
 
-  Message() : data_len(0), code(0), crc32(0) {
-  }
+  Message(char header[8], std::string&& data_);
 };
-
 
 }  // namespace app
 

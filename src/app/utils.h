@@ -1,6 +1,8 @@
 #ifndef APP_UTILS_H_
 #define APP_UTILS_H_
 
+#include <string>
+
 namespace app {
 
 namespace sock {
@@ -14,6 +16,14 @@ bool Bind(int fd, unsigned short port);
 bool SetReuseAddr(int fd);
 
 }  // namespace sock
+
+enum ByteOrder {
+  kLittleEndian = 0,
+  kBigEndian
+};
+
+std::uint32_t BytesToUint32(ByteOrder byte_order, char bytes[4]);
+std::uint16_t BytesToUint16(ByteOrder byte_order, char bytes[2]);
 
 }  // namespace app
 
