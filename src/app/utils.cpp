@@ -66,20 +66,30 @@ bool SetReuseAddr(int fd) {
 
 }  // namespace sock
 
-std::uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
-  if (byte_order == kLittleEndian) {
-    return bytes[0] | bytes[1] << 8;
-  }
-
-  return bytes[1] | bytes[0] << 8;
+inline uint16_t CharToUint16(char c) {
+  return static_cast<uint16_t>(static_cast<uint8_t>(c));
 }
 
-std::uint32_t BytesToUint32(ByteOrder byte_order, char bytes[4]) {
+inline uint32_t CharToUint32(char c) {
+  return static_cast<uint32_t>(static_cast<uint8_t>(c));
+}
+
+uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
   if (byte_order == kLittleEndian) {
-    return bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 16;
+    return CharToUint16(bytes[0]) | CharToUint16(bytes[1]) << 8;
   }
 
-  return bytes[3] | bytes[2] << 8 | bytes[1] << 16 | bytes[0] << 16;
+  return CharToUint16(bytes[1]) | CharToUint16(bytes[0]) << 8;
+}
+
+uint32_t BytesToUint32(ByteOrder byte_order, char bytes[4]) {
+  if (byte_order == kLittleEndian) {
+    return CharToUint16(bytes[0]) | CharToUint16(bytes[1]) << 8 |
+           CharToUint16(bytes[2]) << 16 | CharToUint16(bytes[3]) << 24;
+  }
+
+  return CharToUint32(bytes[3]) | CharToUint32(bytes[2]) << 8 |
+         CharToUint32(bytes[1]) << 16 | CharToUint32(bytes[0]) << 24;
 }
 
 }  // app

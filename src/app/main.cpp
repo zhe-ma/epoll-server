@@ -20,9 +20,10 @@ int main(int argc, char* const*argv) {
     return -1;
   }
 
+  // TODO: console log configurable
   // Init logging.
   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
-              CONFIG.log_rotate_count);
+              CONFIG.log_rotate_count, "trace");
   SPDLOG_DEBUG("==========================================================");
 
   Server server(9005);

@@ -1,6 +1,32 @@
+==========================================================================
+TODO:
+
+0. 文档。
 1. 父进程可以重新创建新的子进程。
 2. 测试SignalHandler。
 3. 测试
 4. InitSignal和CreateDaemon的调用顺序
 5. 为什么要设置为非阻塞模式？？？？？？
 6. TODO: delete conn.
+7. TODO: configurable.
+8. configurable size_t MAX_EPOLL_EVENTS,MAX_CONNECTION_POLL_SIZE;
+9. ConnectionPoll作为单例?
+10. Epoller 封装epoll动作?
+11. client 测试。
+12. Connection依赖Server, Server依赖ConnectionPool,ConnectionPoll依赖Connection，解耦？
+13. Delete iostream output
+14. console log configurable
+
+15. Bug总结
+ std::uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
+  if (byte_order == kLittleEndian) {
+    return bytes[0] | bytes[1] << 8;
+  }
+
+  return bytes[1] | bytes[0] << 8;
+}
+
+16. 用Go test来测试
+
+==========================================================================
+DONE:

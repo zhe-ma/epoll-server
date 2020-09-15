@@ -11,14 +11,32 @@
 
 namespace app {
 
-Connection::Connection(int socket_fd, Server* server)
-    : socket_fd_(socket_fd)
-    , server_(server)
+Connection::Connection()
+    : socket_fd_(-1)
+    , server_(nullptr)
     , is_listen_socket_(false)
     , remote_port_(-1)
     , recv_header_(Message::kHeaderLen, 0)
     , recv_header_len_(0)
     , recv_data_len_(0) {
+}
+
+Connection::~Connection() {
+  Close();
+}
+
+void Connection::Close() {
+  if (socket_fd_ != -1) {
+    close(socket_fd_);
+  }
+
+  socket_fd_ = -1;
+  server_ = nullptr;
+  is_listen_socket_ = false;
+  remote_ip_.clear();
+  remote_port_ = -1;
+  recv_header_len_ = 0;
+  recv_data_len_ = 0;
 }
 
 void Connection::HandleRead() {
@@ -34,7 +52,7 @@ void Connection::HandleWrite() {
 }
 
 void Connection::DoRead() {
-  // Msg formart: DataLen(LittleEndian) + MsgCode(LittleEndian) + Data.
+  // Msg Bytes: DataLen(LittleEndian) + MsgCode(LittleEndian) + CRC32(LittleEndian) + Data.
 
   // Receive header.
   if (recv_header_len_ < Message::kHeaderLen) {
@@ -68,7 +86,7 @@ void Connection::DoRead() {
 
   if (recv_data_len_ == recv_data_.size()) {
     Message msg(&recv_header_[0], std::move(recv_data_));
-    SPDLOG_DEBUG("Recv:{},{},{},{}", msg.data_len, msg.code,msg.crc32, msg.data);
+    SPDLOG_TRACE("Recv:{},{},{},{}", msg.data_len, msg.code,msg.crc32, msg.data);
     recv_header_len_ = 0;
     recv_data_len_ = 0;
   }
@@ -87,11 +105,10 @@ void Connection::DoAccept() {
   // 将listen socket设置为非阻塞，防止该函数阻塞太久。
   int fd = accept(socket_fd_, (struct sockaddr*)&sock_addr, &sock_len);
   if (fd == -1) {
-    int err = errno;
-
     // EAGAIN是提示再试一次。这个错误经常出现在当应用程序进行一些非阻塞操作。
     // 如果read操作而没有数据可读，此时程序不会阻塞起来等待数据准备就绪返回，
     // read函数会返回一个错误EAGAIN，提示现在没有数据可读请稍后再试。
+    int err = errno;
     if (err == EAGAIN || err == EINTR) {
       return;
     }
@@ -118,27 +135,31 @@ void Connection::DoAccept() {
     return;
   }
 
-  Connection* conn = new Connection(fd, server_);
+  Connection* conn = server_->GetConnection();
+  if (conn == nullptr) {
+    SPDLOG_WARN("Connection pool is empty. Remote addr: {}:{}.", remote_ip, remote_port);
+    return;
+  }
+
+  conn->set_socket_fd(fd);
+  conn->set_server(server_);
   conn->set_remote_ip(remote_ip);
   conn->set_remote_port(remote_port);
 
   if (!server_->UpdateEpollEvent(fd, conn, EPOLL_CTL_ADD, true, false)) {
     SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
-    close(fd);
-    delete conn;
+    server_->ReleaseConnection(conn);
     return;
   }
-
-  // Add to conn poll.
 }
 
 int Connection::Recv(char* buf, size_t buf_len) {
-  // recv (int __fd, void *__buf, size_t __n, int __flags)
   ssize_t n = recv(socket_fd_, buf, buf_len, 0);
 
   // 对端的socket已正常关闭。
   if (n == 0) {
-    // ngx_close_connection(c);
+    SPDLOG_TRACE("Remote socket close. Remote addr: {}:{}.", remote_ip_, remote_port_);
+    server_->ReleaseConnection(this);
     return -1;
   }
 
@@ -146,15 +167,15 @@ int Connection::Recv(char* buf, size_t buf_len) {
     return n;
   }
 
-  int err = errno;
   // EAGAIN这个操作可能等下重试后可用。它的另一个名字叫做EWOULDAGAIN。
+  int err = errno;
   if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
     return -1;
   }
 
   SPDLOG_WARN("Failed to recv data. RemoteAddr:{}. Error: {}-{}.", remote_ip_, err, strerror(err));
 
-  // ngx_close_connection(c);
+  server_->ReleaseConnection(this);
   return -1;
 }
 

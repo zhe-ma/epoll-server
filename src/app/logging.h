@@ -12,7 +12,8 @@ namespace app {
 // Log level: "trace", "debug", "info", "warn", "error", "fatal".
 // Rotate size: Byte.
 void InitLogging(const std::string& file_name, const std::string& level,
-                 std::size_t rotate_size, std::size_t rotate_count);
+                 std::size_t rotate_size, std::size_t rotate_count,
+                 const std::string& console_log_level);
 
 class TrackMethodLog {
 public:

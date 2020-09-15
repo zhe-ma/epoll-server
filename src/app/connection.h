@@ -10,7 +10,19 @@ namespace app {
 
 class Connection {
 public:
-  Connection(int socket_fd, Server* server);
+  Connection();
+
+  ~Connection();
+
+  void Close();
+
+  void set_server(Server* server) {
+    server_ = server;
+  }
+
+  void set_socket_fd(int socket_fd) {
+    socket_fd_ = socket_fd;
+  }
 
   int socket_fd() const {
     return socket_fd_;

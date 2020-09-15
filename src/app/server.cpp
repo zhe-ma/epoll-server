@@ -11,10 +11,16 @@
 
 namespace app {
 
+// TODO: Configubale
+const size_t MAX_EPOLL_EVENTS = 512;
+const size_t MAX_CONNECTION_POLL_SIZE = 1024;
+
 Server::Server(unsigned short port)
     : port_(port)
     , listen_fd_(-1)
-    , epoll_fd_(-1) {
+    , epoll_fd_(-1)
+    , epoll_events_(MAX_EPOLL_EVENTS)
+    , connection_pool_(MAX_CONNECTION_POLL_SIZE) {
 }
 
 bool Server::Start() {
@@ -38,12 +44,13 @@ bool Server::Start() {
     return false;
   }
 
-  Connection* conn = new Connection(listen_fd_, this);
+  Connection* conn = connection_pool_.Get();
+  conn->set_server(this);
+  conn->set_socket_fd(listen_fd_);
   conn->set_is_listen_socket(true);
 
   if (!UpdateEpollEvent(listen_fd_, conn, EPOLL_CTL_ADD, true, false)) {
-    delete conn;
-    conn = nullptr;
+    connection_pool_.Release(conn);
     return false;
   }
 
@@ -83,6 +90,14 @@ bool Server::UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, b
   return true;
 }
 
+Connection* Server::GetConnection() {
+  return connection_pool_.Get();
+}
+
+void Server::ReleaseConnection(Connection* conn) {
+  connection_pool_.Release(conn);
+}
+
 bool Server::Listen() {
   SPDLOG_TRACK_METHOD;
 
@@ -117,12 +132,11 @@ bool Server::PollOnce(int waiting_ms) {
   // waiting_ms = -1时，一直阻塞直到收到事件。
   // waiting_ms > 0 时，阻塞时间到达或者阻塞时收到事件都会返回。
   // 返回值n，收到的事件数。
-  int n = epoll_wait(epoll_fd_, epoll_events_, MAX_EPOLL_EVENTS, waiting_ms);
+  int n = epoll_wait(epoll_fd_, &epoll_events_[0], epoll_events_.size(), waiting_ms);
 
   // n = -1, 有错误产生。
   if (n == -1 ) {
     SPDLOG_ERROR("Failed to epoll wait. Error: {}-{}.", errno, strerror(errno));
-
     // EINTR: Interrupted system call, epoll_wait被更高级的系统调用打断, 错误可以忽略。
     // 其他错误则提出。
     return errno == EINTR;

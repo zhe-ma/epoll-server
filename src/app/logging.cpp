@@ -36,14 +36,15 @@ static spdlog::level::level_enum GetLogLevel(const std::string& level_name) {
 }
 
 void InitLogging(const std::string& file_name, const std::string& level,
-                 std::size_t rotate_size, std::size_t rotate_count) {
+                 std::size_t rotate_size, std::size_t rotate_count,
+                 const std::string& console_log_level) {
   using namespace spdlog::sinks;
 
   auto file_sink = std::make_shared<rotating_file_sink_mt>(file_name, rotate_size, rotate_count);
   file_sink->set_level(GetLogLevel(level));
 
   auto stderr_sink = std::make_shared<stderr_color_sink_mt>();
-  stderr_sink->set_level(spdlog::level::critical);
+  stderr_sink->set_level(GetLogLevel(console_log_level));
 
   auto logger = std::make_shared<spdlog::logger>("logger", spdlog::sinks_init_list{file_sink, stderr_sink});
   logger->set_level(spdlog::level::trace);

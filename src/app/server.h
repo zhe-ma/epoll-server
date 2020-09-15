@@ -1,13 +1,13 @@
 #ifndef APP_SERVER_H_
 #define APP_SERVER_H_
 
+#include <vector>
+
 #include <sys/epoll.h>
 
+#include "app/connection_pool.h"
+
 namespace app {
-
-class Connection;
-
-const int MAX_EPOLL_EVENTS = 512;
 
 class Server {
 public:
@@ -18,6 +18,9 @@ public:
   bool Start();
 
   bool UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write);
+
+  Connection* GetConnection();
+  void ReleaseConnection(Connection* conn);
 
 private:
   bool Listen();
@@ -30,7 +33,9 @@ private:
   int listen_fd_;
   int epoll_fd_;
 
-  struct epoll_event epoll_events_[MAX_EPOLL_EVENTS]; 
+  std::vector<struct epoll_event> epoll_events_;
+
+  ConnectionPool connection_pool_;
 };
 
 }  // namespace app
