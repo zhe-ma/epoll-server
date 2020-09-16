@@ -1,9 +1,8 @@
-package main
+package test
 
 import (
 	"bytes"
 	"encoding/binary"
-	"net"
 )
 
 type Message struct {
@@ -22,21 +21,4 @@ func (msg *Message) Pack() []byte {
 	binary.Write(dataBuff, binary.LittleEndian, msg.Data)
 
 	return dataBuff.Bytes()
-}
-
-func main() {
-	client, err := net.Dial("tcp4", "0.0.0.0:9005")
-	if err != nil {
-		panic(err)
-	}
-	defer client.Close()
-
-	msg := Message{5, 12, 23, []byte("Hello")}
-	client.Write(msg.Pack())
-
-	msg2 := Message{6, 12121, -19191919, []byte("World!")}
-	buf := msg.Pack()
-	buf = append(buf, msg2.Pack()...)
-
-	client.Write(buf)
 }

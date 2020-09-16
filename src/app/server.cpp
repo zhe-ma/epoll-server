@@ -185,6 +185,8 @@ bool Server::PollOnce(int waiting_ms) {
       continue;
     }
   }
+
+  return true;
 }
 
 }  // namespace app
