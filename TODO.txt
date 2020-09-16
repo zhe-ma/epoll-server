@@ -28,5 +28,11 @@ TODO:
 
 16. 用Go test来测试
 
+17. VS code build task https://blog.csdn.net/u013894860/article/details/97555901
+                      https://www.cnblogs.com/liudianfengmang/p/12458108.html
+                      https://blog.csdn.net/gbmaotai/article/details/88974988
+
+18. Revisit folder.
+
 ==========================================================================
 DONE:
