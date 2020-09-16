@@ -19,13 +19,13 @@ public:
 
   bool UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write);
 
-  Connection* GetConnection();
-  void ReleaseConnection(Connection* conn);
-
 private:
   bool Listen();
 
   bool PollOnce(int waiting_ms);
+
+  void HandleAccpet(Connection* conn);
+  void HandleRead(Connection* conn);
 
 private:
   unsigned short port_;

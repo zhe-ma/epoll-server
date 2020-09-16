@@ -22,8 +22,8 @@ enum ByteOrder {
   kBigEndian
 };
 
-uint32_t BytesToUint32(ByteOrder byte_order, char bytes[4]);
-uint16_t BytesToUint16(ByteOrder byte_order, char bytes[2]);
+uint32_t BytesToUint32(ByteOrder byte_order, const char bytes[4]);
+uint16_t BytesToUint16(ByteOrder byte_order, const char bytes[2]);
 
 }  // namespace app
 

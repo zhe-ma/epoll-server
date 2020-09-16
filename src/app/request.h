@@ -1,6 +1,8 @@
 #ifndef APP_MESSAGE_H_
 #define APP_REQUEST_H_
 
+#include <memory>
+
 #include "app/connection.h"
 #include "app/message.h"
 
@@ -10,11 +12,13 @@ struct Request {
   Connection* conn;
   Message msg;
 
-  Request(Connection* conn_, const Message& msg_)
+  Request(Connection* conn_, Message&& msg_)
       : conn(conn_)
-      , msg(msg_) {
+      , msg(std::move(msg_)) {
   }
-}
+};
+
+using RequestPtr = std::shared_ptr<Request>;
 
 }  // namespace app
 

@@ -4,9 +4,11 @@
 #include <string>
 #include <functional>
 
-#include "app/server.h"
+struct sockaddr_in;
 
 namespace app {
+
+class Message;
 
 class Connection {
 public:
@@ -15,10 +17,6 @@ public:
   ~Connection();
 
   void Close();
-
-  void set_server(Server* server) {
-    server_ = server;
-  }
 
   void set_socket_fd(int socket_fd) {
     socket_fd_ = socket_fd;
@@ -30,6 +28,10 @@ public:
 
   void set_is_listen_socket(bool is_listen_socket) {
     is_listen_socket_ = is_listen_socket;
+  }
+
+  bool is_listen_socket() const {
+    return is_listen_socket_;
   }
 
   void set_remote_ip(const std::string& remote_ip) {
@@ -48,18 +50,18 @@ public:
     return remote_port_;
   }
 
-  void HandleRead();
+  // Return socket fd.
+  int HandleAccept(struct sockaddr_in* sock_addr);
+
+  // Return false if client closed or some read errors occurred.
+  bool HandleRead(Message* msg);
+
   void HandleWrite();
 
 private:
-  void DoRead();
-  void DoAccept();
-
   int Recv(char* buf, size_t buf_len);
 
 private:
-  Server* server_;
-
   int socket_fd_;
   bool is_listen_socket_;
 

@@ -74,7 +74,7 @@ inline uint32_t CharToUint32(char c) {
   return static_cast<uint32_t>(static_cast<uint8_t>(c));
 }
 
-uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
+uint16_t BytesToUint16(ByteOrder byte_order, const char bytes[4]) {
   if (byte_order == kLittleEndian) {
     return CharToUint16(bytes[0]) | CharToUint16(bytes[1]) << 8;
   }
@@ -82,7 +82,7 @@ uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
   return CharToUint16(bytes[1]) | CharToUint16(bytes[0]) << 8;
 }
 
-uint32_t BytesToUint32(ByteOrder byte_order, char bytes[4]) {
+uint32_t BytesToUint32(ByteOrder byte_order, const char bytes[4]) {
   if (byte_order == kLittleEndian) {
     return CharToUint16(bytes[0]) | CharToUint16(bytes[1]) << 8 |
            CharToUint16(bytes[2]) << 16 | CharToUint16(bytes[3]) << 24;

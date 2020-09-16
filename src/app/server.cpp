@@ -8,6 +8,7 @@
 #include "app/logging.h"
 #include "app/utils.h"
 #include "app/connection.h"
+#include "app/message.h"
 
 namespace app {
 
@@ -45,7 +46,6 @@ bool Server::Start() {
   }
 
   Connection* conn = connection_pool_.Get();
-  conn->set_server(this);
   conn->set_socket_fd(listen_fd_);
   conn->set_is_listen_socket(true);
 
@@ -88,14 +88,6 @@ bool Server::UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, b
   }
 
   return true;
-}
-
-Connection* Server::GetConnection() {
-  return connection_pool_.Get();
-}
-
-void Server::ReleaseConnection(Connection* conn) {
-  connection_pool_.Release(conn);
 }
 
 bool Server::Listen() {
@@ -169,24 +161,81 @@ bool Server::PollOnce(int waiting_ms) {
     }
 
     int events = epoll_events_[i].events;
-
     // 如果收到EPOLLERR或者EPOLLRDHUP，socket断掉，则在HanldeRead和HandleWrite中进行处理。
     if (events & (EPOLLERR | EPOLLRDHUP) ) {
       events |= EPOLLIN | EPOLLOUT; 
     }
 
     if (events & EPOLLIN) {
-      conn->HandleRead();
-      continue;
-    }
+      conn->is_listen_socket() ? HandleAccpet(conn) : HandleRead(conn);
 
-    if (events & EPOLLOUT) {
+    } else if (events & EPOLLOUT) {
       conn->HandleWrite();
-      continue;
     }
   }
 
   return true;
+}
+
+void Server::HandleAccpet(Connection* conn) {
+  if (conn == nullptr) {
+    return;
+  }
+
+  struct sockaddr_in sock_addr;
+  int fd = conn->HandleAccept(&sock_addr);
+  if (fd == -1) {
+    return;
+  }
+
+  char remote_ip[30] = { 0 };
+  inet_ntop(AF_INET,&sock_addr.sin_addr, remote_ip, sizeof(remote_ip));
+  unsigned short remote_port = ntohs(sock_addr.sin_port);
+
+  SPDLOG_TRACE("Accept socket. Remote addr: {}:{}.", remote_ip, remote_port);
+
+  if (!sock::SetNonBlocking(fd)) {
+    SPDLOG_WARN("Failed to SetNonBlocking. Remote addr: {}:{}.", remote_ip, remote_port);
+    close(fd);
+    return;
+  }
+
+  if (!sock::SetClosexc(fd)) {
+    SPDLOG_WARN("Failed to SetClosexc. Remote addr: {}:{}.", remote_ip, remote_port);
+    close(fd);
+    return;
+  }
+
+  Connection* new_conn = connection_pool_.Get();
+  if (new_conn == nullptr) {
+    SPDLOG_WARN("Connection pool is empty. Remote addr: {}:{}.", remote_ip, remote_port);
+    return;
+  }
+
+  new_conn->set_socket_fd(fd);
+  new_conn->set_remote_ip(remote_ip);
+  new_conn->set_remote_port(remote_port);
+
+  if (!UpdateEpollEvent(fd, new_conn, EPOLL_CTL_ADD, true, false)) {
+    SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
+    connection_pool_.Release(new_conn);
+    return;
+  }
+}
+
+void Server::HandleRead(Connection* conn) {
+  Message msg;
+  if (!conn->HandleRead(&msg)) {
+    connection_pool_.Release(conn);
+    return;
+  }
+
+  if (!msg.valid()) {
+    return;
+  }
+
+  SPDLOG_TRACE("Recv:{},{},{},{}", msg.data_len, msg.code, msg.crc32, msg.data);
+
 }
 
 }  // namespace app

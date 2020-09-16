@@ -8,24 +8,25 @@
       "type": "shell",
       "command": "mkdir build -p"
     },
-
     {
       "label": "cmake",
       "type": "shell",
       "command": "cmake -DCMAKE_BUILD_TYPE=debug ..",
-      "dependsOn": ["mkdir"],  // 执行之前首先创建build目录
+      "dependsOn": [
+        "mkdir"
+      ],
       "options": {
-        "cwd": "${workspaceFolder}/build"  // 切换到build目录
-      },
+        "cwd": "${workspaceFolder}/build"
+      }
     },
-
     {
       "label": "make",
       "type": "shell",
       "command": "make -j4",
       "options": {
-        "cwd": "${workspaceFolder}/build"  // 切换到build目录
+        "cwd": "${workspaceFolder}/build"
       },
+      "problemMatcher": []
     }
   ]
 }
