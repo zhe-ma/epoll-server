@@ -27,13 +27,14 @@ include_directories(
     # ${PROJECT_BINARY_DIR}/src
     )
 
-set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party)
-include_directories(${THIRD_PARTY_DIR})
-include_directories(${THIRD_PARTY_DIR}/spdlog)
-
-add_subdirectory(${THIRD_PARTY_DIR}/jsoncpp)
-add_subdirectory(${THIRD_PARTY_DIR}/gtest)
-add_subdirectory(${THIRD_PARTY_DIR}/spdlog)
+# set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party)
+# include_directories(${THIRD_PARTY_DIR})
 
 # add_subdirectory(src/unittest)
+
+include_directories(src/spdlog)
+
+add_subdirectory(src/jsoncpp)
+add_subdirectory(src/gtest)
+add_subdirectory(src/spdlog)
 add_subdirectory(src/app)
