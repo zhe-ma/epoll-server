@@ -12,7 +12,6 @@ TODO:
 8. configurable size_t MAX_EPOLL_EVENTS,MAX_CONNECTION_POLL_SIZE;
 9. ConnectionPoll作为单例?
 10. Epoller 封装epoll动作?
-11. client 测试。
 12. Connection依赖Server, Server依赖ConnectionPool,ConnectionPoll依赖Connection，解耦？
 13. Delete iostream output
 14. console log configurable
@@ -26,6 +25,11 @@ TODO:
   return bytes[1] | bytes[0] << 8;
 }
 
+19. 第五章笔记。
+
+==========================================================================
+DONE:
+
 16. 用Go test来测试
 
 17. VS code build task https://blog.csdn.net/u013894860/article/details/97555901
@@ -34,5 +38,4 @@ TODO:
 
 18. Revisit folder.
 
-==========================================================================
-DONE:
+11. client 测试。

@@ -13,7 +13,7 @@
       "label": "cmake",
       "type": "shell",
       "command": "cmake -DCMAKE_BUILD_TYPE=debug ..",
-      "dependsOn": ["mkdir"],
+      "dependsOn": ["mkdir"],  // 执行之前首先创建build目录
       "options": {
         "cwd": "${workspaceFolder}/build"  // 切换到build目录
       },
