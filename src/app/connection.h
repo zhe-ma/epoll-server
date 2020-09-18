@@ -4,11 +4,11 @@
 #include <string>
 #include <functional>
 
+#include "app/message.h"
+
 struct sockaddr_in;
 
 namespace app {
-
-class Message;
 
 class Connection {
 public:
@@ -53,8 +53,9 @@ public:
   // Return socket fd.
   int HandleAccept(struct sockaddr_in* sock_addr);
 
+  // Inititalize msg if recieved a completed message.
   // Return false if client closed or some read errors occurred.
-  bool HandleRead(Message* msg);
+  bool HandleRead(MessagePtr msg);
 
   void HandleWrite();
 

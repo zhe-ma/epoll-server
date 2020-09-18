@@ -6,6 +6,8 @@
 #include <sys/epoll.h>
 
 #include "app/connection_pool.h"
+#include "app/thread_pool.h"
+#include "app/message.h"
 
 namespace app {
 
@@ -27,6 +29,8 @@ private:
   void HandleAccpet(Connection* conn);
   void HandleRead(Connection* conn);
 
+  void HandleRequest(MessagePtr msg);
+
 private:
   unsigned short port_;
 
@@ -36,6 +40,7 @@ private:
   std::vector<struct epoll_event> epoll_events_;
 
   ConnectionPool connection_pool_;
+  ThreadPool<Message> thread_pool_;
 };
 
 }  // namespace app

@@ -54,12 +54,19 @@ bool Server::Start() {
     return false;
   }
 
+  // TODO: configurable.
+  thread_pool_.Start(4, [this](MessagePtr msg) {
+    HandleRequest(msg);
+  });
+
   // TODO: delete conn.
   for (;;) {
     if (!PollOnce(-1)) {
       return false;
     }
   }
+
+  thread_pool_.StopAndWait();
 
   return true;
 }
@@ -224,18 +231,23 @@ void Server::HandleAccpet(Connection* conn) {
 }
 
 void Server::HandleRead(Connection* conn) {
-  Message msg;
-  if (!conn->HandleRead(&msg)) {
+  MessagePtr msg = std::make_shared<Message>();
+  if (!conn->HandleRead(msg)) {
     connection_pool_.Release(conn);
     return;
   }
 
-  if (!msg.Valid()) {
+  if (!msg->Valid()) {
     return;
   }
+  
+  SPDLOG_TRACE("Recv:{},{},{},{}", msg->data_len, msg->code, msg->crc32, msg->data);
 
-  SPDLOG_TRACE("Recv:{},{},{},{}", msg.data_len, msg.code, msg.crc32, msg.data);
+  thread_pool_.Add(std::move(msg));
+}
 
+void Server::HandleRequest(MessagePtr msg) {
+  SPDLOG_TRACE("Handle request: {}", msg->data);
 }
 
 }  // namespace app

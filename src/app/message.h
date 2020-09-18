@@ -2,6 +2,7 @@
 #define APP_MESSAGE_H_
 
 #include <string>
+#include <memory>
 
 namespace app {
 
@@ -32,6 +33,8 @@ public:
 private:
   Connection* conn_;
 };
+
+using MessagePtr = std::shared_ptr<Message>;
 
 }  // namespace app
 

@@ -66,7 +66,7 @@ int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
   return -1;
 }
 
-bool Connection::HandleRead(Message* msg) {
+bool Connection::HandleRead(MessagePtr msg) {
   // Msg Bytes: DataLen(LittleEndian) + MsgCode(LittleEndian) + CRC32(LittleEndian) + Data.
 
   // Receive header.
@@ -111,7 +111,7 @@ bool Connection::HandleRead(Message* msg) {
   }
 
   // 数据接收完整返回Message。
-  if (msg != nullptr) {
+  if (msg) {
     msg->Set(this, &recv_header_[0], std::move(recv_data_));
   }
 
