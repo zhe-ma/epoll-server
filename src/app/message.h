@@ -5,6 +5,8 @@
 
 namespace app {
 
+class Connection;
+
 // Message = Header + Body.
 // Header = DataLength + MsgCode + Crc32.
 // Message Bytes = DataLen(LittleEndian) + MsgCode(LittleEndian) + CRC32(LittleEndian) + Data.
@@ -23,18 +25,12 @@ public:
 
   Message();
 
-  bool valid() const {
-    return valid_;
-  }
+  bool Valid() const;
 
-  void set_valid(bool valid) {
-    valid_ = valid;
-  }
-
-  void Set(const char header[8], std::string&& data_);
+  void Set(Connection* conn, const char header[8], std::string&& data_);
 
 private:
-  bool valid_;
+  Connection* conn_;
 };
 
 }  // namespace app

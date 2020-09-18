@@ -112,7 +112,7 @@ bool Connection::HandleRead(Message* msg) {
 
   // 数据接收完整返回Message。
   if (msg != nullptr) {
-    msg->Set(&recv_header_[0], std::move(recv_data_));
+    msg->Set(this, &recv_header_[0], std::move(recv_data_));
   }
 
   recv_header_len_ = 0;

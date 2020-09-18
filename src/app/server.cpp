@@ -230,7 +230,7 @@ void Server::HandleRead(Connection* conn) {
     return;
   }
 
-  if (!msg.valid()) {
+  if (!msg.Valid()) {
     return;
   }
 
