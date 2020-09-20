@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <sys/errno.h>
 
+#include "app/crc32.h"
 #include "app/logging.h"
 #include "app/utils.h"
 #include "app/connection.h"
@@ -69,6 +70,10 @@ bool Server::Start() {
   thread_pool_.StopAndWait();
 
   return true;
+}
+
+void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
+  routers_[msg_code] = router;
 }
 
 // EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。
@@ -246,8 +251,54 @@ void Server::HandleRead(Connection* conn) {
   thread_pool_.Add(std::move(msg));
 }
 
-void Server::HandleRequest(MessagePtr msg) {
-  SPDLOG_TRACE("Handle request: {}", msg->data);
+void Server::HandleRequest(MessagePtr request) {
+  if (!request) {
+    return;
+  }
+
+  SPDLOG_TRACE("Handle request: {}", request->data);
+
+  // TODO: 过期包判断。
+
+  if (request->data_len != request->data.size()) {
+    SPDLOG_DEBUG("Invaid Request");
+    return;
+  }
+
+  // 只有包头，CRC32值应为0。
+  if (request->data_len == 0 && request->crc32 !=0) {
+    SPDLOG_DEBUG("Invaid Request");
+    return;
+  }
+
+  if (request->data_len !=0) {
+    // CRC32校验失败。
+    uint32_t crc32 = CalcCRC32(request->data);
+    if (request->crc32 != crc32) {
+      SPDLOG_DEBUG("Invaid Request");
+      return;
+    }
+  }
+
+  auto it = routers_.find(request->code);
+  if (it == routers_.end()) {
+    SPDLOG_WARN("No msg router. Msg code:{}.", request->code);
+    return;
+  }
+
+  RouterPtr router = it->second;
+  if (!router) {
+    SPDLOG_WARN("No msg router. Msg code:{}.", request->code);
+    return;
+  }
+
+  std::string response_data = router->HandleRequest(request);
+  MessagePtr response = std::make_shared<Message>();
+  response->data_len = static_cast<uint16_t>(response_data.size());
+  response->code = request->code;
+  response->data = std::move(response_data);
+  response->crc32 = CalcCRC32(response->data);
+  response->set_conn(request->conn());
 }
 
 }  // namespace app

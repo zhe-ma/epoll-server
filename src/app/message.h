@@ -16,7 +16,7 @@ class Message {
 public:
   uint16_t data_len;  // 数据长度。
   uint16_t code;  // 区别不同的命令。
-  int32_t crc32;  // 数据校验。
+  uint32_t crc32;  // 数据校验。
 
   std::string data;
 
@@ -29,6 +29,14 @@ public:
   bool Valid() const;
 
   void Set(Connection* conn, const char header[8], std::string&& data_);
+
+  Connection* conn() const {
+    return conn_;
+  }
+
+  void set_conn(Connection* conn) {
+    conn_ = conn;
+  }
 
 private:
   Connection* conn_;

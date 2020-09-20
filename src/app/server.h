@@ -2,11 +2,13 @@
 #define APP_SERVER_H_
 
 #include <vector>
+#include <unordered_map>
 
 #include <sys/epoll.h>
 
 #include "app/connection_pool.h"
 #include "app/thread_pool.h"
+#include "app/router_base.h"
 #include "app/message.h"
 
 namespace app {
@@ -19,6 +21,8 @@ public:
 
   bool Start();
 
+  void AddRouter(uint16_t msg_code, RouterPtr router);
+
   bool UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write);
 
 private:
@@ -29,7 +33,7 @@ private:
   void HandleAccpet(Connection* conn);
   void HandleRead(Connection* conn);
 
-  void HandleRequest(MessagePtr msg);
+  void HandleRequest(MessagePtr request);
 
 private:
   unsigned short port_;
@@ -41,6 +45,9 @@ private:
 
   ConnectionPool connection_pool_;
   ThreadPool<Message> thread_pool_;
+
+  // The key is Message Code.
+  std::unordered_map<uint16_t, RouterPtr> routers_;
 };
 
 }  // namespace app
