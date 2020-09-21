@@ -25,6 +25,9 @@ enum ByteOrder {
 uint32_t BytesToUint32(ByteOrder byte_order, const char bytes[4]);
 uint16_t BytesToUint16(ByteOrder byte_order, const char bytes[2]);
 
+// Return the milliseconds timestamp.
+int64_t GetNowTimestamp();
+
 }  // namespace app
 
 #endif  // APP_UTILS_H_

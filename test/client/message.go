@@ -8,7 +8,7 @@ import (
 type Message struct {
 	DataLen uint16
 	Code    uint16
-	Crc32   int32
+	Crc32   uint32
 	Data    []byte
 }
 

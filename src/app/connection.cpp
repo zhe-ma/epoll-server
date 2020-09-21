@@ -13,6 +13,7 @@ namespace app {
 
 Connection::Connection()
     : socket_fd_(-1)
+    , timestamp_(0)
     , is_listen_socket_(false)
     , remote_port_(-1)
     , recv_header_(Message::kHeaderLen, 0)
@@ -29,12 +30,24 @@ void Connection::Close() {
     close(socket_fd_);
   }
 
+  timestamp_.store(0, std::memory_order_relaxed);
+
   socket_fd_ = -1;
   is_listen_socket_ = false;
   remote_ip_.clear();
   remote_port_ = -1;
   recv_header_len_ = 0;
   recv_data_len_ = 0;
+}
+
+void Connection::UpdateTimestamp() {
+  auto now = GetNowTimestamp();
+  timestamp_.store(now, std::memory_order_relaxed);
+}
+
+int64_t Connection::GetTimestamp() const {
+  int64_t a = timestamp_.load(std::memory_order_relaxed);
+  return a;
 }
 
 int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
@@ -66,7 +79,7 @@ int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
   return -1;
 }
 
-bool Connection::HandleRead(MessagePtr msg) {
+bool Connection::HandleRead(MessagePtr* msg) {
   // Msg Bytes: DataLen(LittleEndian) + MsgCode(LittleEndian) + CRC32(LittleEndian) + Data.
 
   // Receive header.
@@ -111,8 +124,9 @@ bool Connection::HandleRead(MessagePtr msg) {
   }
 
   // 数据接收完整返回Message。
-  if (msg) {
-    msg->Set(this, &recv_header_[0], std::move(recv_data_));
+  if (msg != nullptr) {
+    msg->reset(new Message);
+    (*msg)->Unpack(this, &recv_header_[0], std::move(recv_data_));
   }
 
   recv_header_len_ = 0;

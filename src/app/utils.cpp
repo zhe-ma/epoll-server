@@ -1,5 +1,7 @@
 #include "app/utils.h"
 
+#include <chrono>
+
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -90,6 +92,12 @@ uint32_t BytesToUint32(ByteOrder byte_order, const char bytes[4]) {
 
   return CharToUint32(bytes[3]) | CharToUint32(bytes[2]) << 8 |
          CharToUint32(bytes[1]) << 16 | CharToUint32(bytes[0]) << 24;
+}
+
+int64_t GetNowTimestamp() {
+  using namespace std::chrono;
+  auto now = system_clock::now().time_since_epoch();
+  return duration_cast<milliseconds>(now).count();
 }
 
 }  // app

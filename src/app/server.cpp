@@ -236,13 +236,13 @@ void Server::HandleAccpet(Connection* conn) {
 }
 
 void Server::HandleRead(Connection* conn) {
-  MessagePtr msg = std::make_shared<Message>();
-  if (!conn->HandleRead(msg)) {
+  MessagePtr msg;
+  if (!conn->HandleRead(&msg)) {
     connection_pool_.Release(conn);
     return;
   }
 
-  if (!msg->Valid()) {
+  if (!msg) {
     return;
   }
   
@@ -258,26 +258,8 @@ void Server::HandleRequest(MessagePtr request) {
 
   SPDLOG_TRACE("Handle request: {}", request->data);
 
-  // TODO: 过期包判断。
-
-  if (request->data_len != request->data.size()) {
-    SPDLOG_DEBUG("Invaid Request");
+  if (!request->Valid()) {
     return;
-  }
-
-  // 只有包头，CRC32值应为0。
-  if (request->data_len == 0 && request->crc32 !=0) {
-    SPDLOG_DEBUG("Invaid Request");
-    return;
-  }
-
-  if (request->data_len !=0) {
-    // CRC32校验失败。
-    uint32_t crc32 = CalcCRC32(request->data);
-    if (request->crc32 != crc32) {
-      SPDLOG_DEBUG("Invaid Request");
-      return;
-    }
   }
 
   auto it = routers_.find(request->code);
@@ -293,12 +275,7 @@ void Server::HandleRequest(MessagePtr request) {
   }
 
   std::string response_data = router->HandleRequest(request);
-  MessagePtr response = std::make_shared<Message>();
-  response->data_len = static_cast<uint16_t>(response_data.size());
-  response->code = request->code;
-  response->data = std::move(response_data);
-  response->crc32 = CalcCRC32(response->data);
-  response->set_conn(request->conn());
+  MessagePtr response = std::make_shared<Message>(request->conn(), request->code, std::move(response_data));
 }
 
 }  // namespace app

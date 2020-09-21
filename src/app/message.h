@@ -26,9 +26,11 @@ public:
 
   Message();
 
+  Message(Connection* conn, uint16_t code_, std::string&& data_);
+
   bool Valid() const;
 
-  void Set(Connection* conn, const char header[8], std::string&& data_);
+  void Unpack(Connection* conn, const char header[8], std::string&& data_);
 
   Connection* conn() const {
     return conn_;
@@ -38,8 +40,15 @@ public:
     conn_ = conn;
   }
 
+  void set_conn_timestamp(int64_t conn_timestamp) {
+    conn_timestamp_ = conn_timestamp;
+  }
+
 private:
   Connection* conn_;
+
+  // The connection may be expired, so use timestamp to idendify the original conection.
+  int64_t conn_timestamp_;
 };
 
 using MessagePtr = std::shared_ptr<Message>;

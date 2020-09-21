@@ -1,6 +1,7 @@
 #ifndef APP_CONNECTION_H_
 #define APP_CONNECTION_H_
 
+#include <atomic>
 #include <string>
 #include <functional>
 
@@ -50,12 +51,16 @@ public:
     return remote_port_;
   }
 
+  void UpdateTimestamp();
+
+  int64_t GetTimestamp() const;
+
   // Return socket fd.
   int HandleAccept(struct sockaddr_in* sock_addr);
 
   // Inititalize msg if recieved a completed message.
   // Return false if client closed or some read errors occurred.
-  bool HandleRead(MessagePtr msg);
+  bool HandleRead(MessagePtr* msg);
 
   void HandleWrite();
 
@@ -65,6 +70,8 @@ private:
 private:
   int socket_fd_;
   bool is_listen_socket_;
+
+  std::atomic<int64_t> timestamp_;  // Millsecond.
 
   std::string remote_ip_;
   unsigned short remote_port_;

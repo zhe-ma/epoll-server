@@ -23,6 +23,12 @@ Connection* ConnectionPool::Get() {
   }
 
   Connection* conn = poll_.front();
+  if (conn == nullptr) {
+    return nullptr;
+  }
+
+  conn->UpdateTimestamp();
+
   poll_.pop_front();
   return conn;
 }

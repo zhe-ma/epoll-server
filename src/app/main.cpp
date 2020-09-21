@@ -6,8 +6,15 @@
 #include "app/logging.h"
 #include "app/process.h"
 #include "app/server.h"
+#include "app/router_base.h"
 
 using namespace app;
+
+class Router : public RouterBase {
+  std::string HandleRequest(MessagePtr msg) override {
+    return "Ayou";
+  }
+};
 
 // ps -eo pid,ppid,sid,tty,pgrp,comm,stat,cmd | grep -E 'bash|PID|epoll_server'
 // netstat -anp | grep -E 'State|9000'
@@ -27,6 +34,7 @@ int main(int argc, char* const*argv) {
   SPDLOG_DEBUG("==========================================================");
 
   Server server(9005);
+  server.AddRouter(2020, RouterPtr(new Router));
   server.Start();
 
   // // Backup environ and argv.
