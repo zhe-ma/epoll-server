@@ -25,6 +25,9 @@ enum ByteOrder {
 uint32_t BytesToUint32(ByteOrder byte_order, const char bytes[4]);
 uint16_t BytesToUint16(ByteOrder byte_order, const char bytes[2]);
 
+std::string Uint32ToBytes(ByteOrder byte_order, uint32_t num);
+std::string Uint16ToBytes(ByteOrder byte_order, uint16_t num);
+
 // Return the milliseconds timestamp.
 int64_t GetNowTimestamp();
 

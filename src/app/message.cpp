@@ -72,4 +72,15 @@ void Message::Unpack(Connection* conn, const char header[8], std::string&& data_
   data = std::move(data_);
 }
 
+std::string Message::Pack() const {
+  std::string buf;
+
+  buf += Uint16ToBytes(kLittleEndian, data_len);
+  buf += Uint16ToBytes(kLittleEndian, code);
+  buf += Uint32ToBytes(kLittleEndian, crc32);
+  buf += data;
+
+  return buf;
+}
+
 }  // namespace app

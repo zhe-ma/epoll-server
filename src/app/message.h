@@ -32,6 +32,8 @@ public:
 
   void Unpack(Connection* conn, const char header[8], std::string&& data_);
 
+  std::string Pack() const;
+
   Connection* conn() const {
     return conn_;
   }

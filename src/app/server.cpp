@@ -56,8 +56,13 @@ bool Server::Start() {
   }
 
   // TODO: configurable.
-  thread_pool_.Start(4, [this](MessagePtr msg) {
+  request_thread_pool_.Start(4, [this](MessagePtr msg) {
     HandleRequest(msg);
+  });
+
+  // Only use one thread to send msg.
+  response_thread_pool_.Start(1, [this](MessagePtr msg) {
+    HandleResponse(msg);
   });
 
   // TODO: delete conn.
@@ -67,7 +72,8 @@ bool Server::Start() {
     }
   }
 
-  thread_pool_.StopAndWait();
+  request_thread_pool_.StopAndWait();
+  response_thread_pool_.StopAndWait();
 
   return true;
 }
@@ -248,7 +254,7 @@ void Server::HandleRead(Connection* conn) {
   
   SPDLOG_TRACE("Recv:{},{},{},{}", msg->data_len, msg->code, msg->crc32, msg->data);
 
-  thread_pool_.Add(std::move(msg));
+  request_thread_pool_.Add(std::move(msg));
 }
 
 void Server::HandleRequest(MessagePtr request) {
@@ -277,5 +283,70 @@ void Server::HandleRequest(MessagePtr request) {
   std::string response_data = router->HandleRequest(request);
   MessagePtr response = std::make_shared<Message>(request->conn(), request->code, std::move(response_data));
 }
+
+void Server::HandleResponse(MessagePtr response) {
+  if (!response) {
+    return;
+  }
+
+  SPDLOG_TRACE("Handle Response: {}", response->data);
+
+  // TODO: Check expiration.
+
+  Connection* conn = response->conn();
+  if (conn == nullptr) {
+    return;
+  }
+
+  // TODO: Check event-driven send.
+
+  std::string buf = std::move(response->Pack());
+  size_t len = buf.size();
+  size_t sended_size = 0;
+
+  while (len > sended_size) {
+    int n = send(conn->socket_fd(), &buf[0] + sended_size, len-sended_size, 0);
+    if (n > 0) {
+      sended_size += n;
+      continue;
+    }
+
+    int err = errno;    
+    if (n == -1 && err == EINTR) {
+      continue;
+    }
+
+    if (n == -1 && (err == EAGAIN || err == EWOULDBLOCK)) {
+      // 发送缓冲区满了，需要等待可写事件才能继续往发送缓冲区里写数据。
+      return;
+    }
+
+    SPDLOG_WARN("Send error: {}:{}.", err, strerror(err));
+    return;
+  }
+}
+
+  // size_t sended = 0;
+        // n = send(c->fd, buff, size, 0); //send()系统函数， 最后一个参数flag，一般为0； 
+
+  //   while (len > sended) {
+  //       ssize_t wd = writeImp(channel_->fd(), buf + sended, len - sended);
+  //       trace("channel %lld fd %d write %ld bytes", (long long) channel_->id(), channel_->fd(), wd);
+  //       if (wd > 0) {
+  //           sended += wd;
+  //           continue;
+  //       } else if (wd == -1 && errno == EINTR) {
+  //           continue;
+  //       } else if (wd == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+  //           if (!channel_->writeEnabled()) {
+  //               channel_->enableWrite(true);
+  //           }
+  //           break;
+  //       } else {
+  //           error("write error: channel %lld fd %d wd %ld %d %s", (long long) channel_->id(), channel_->fd(), wd, errno, strerror(errno));
+  //           break;
+  //       }
+  //   }
+  //   return sended;
 
 }  // namespace app

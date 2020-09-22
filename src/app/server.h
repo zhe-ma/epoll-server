@@ -34,6 +34,7 @@ private:
   void HandleRead(Connection* conn);
 
   void HandleRequest(MessagePtr request);
+  void HandleResponse(MessagePtr response);
 
 private:
   unsigned short port_;
@@ -44,7 +45,9 @@ private:
   std::vector<struct epoll_event> epoll_events_;
 
   ConnectionPool connection_pool_;
-  ThreadPool<Message> thread_pool_;
+
+  ThreadPool<Message> request_thread_pool_;
+  ThreadPool<Message> response_thread_pool_;
 
   // The key is Message Code.
   std::unordered_map<uint16_t, RouterPtr> routers_;

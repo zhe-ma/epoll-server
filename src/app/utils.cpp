@@ -94,6 +94,36 @@ uint32_t BytesToUint32(ByteOrder byte_order, const char bytes[4]) {
          CharToUint32(bytes[1]) << 16 | CharToUint32(bytes[0]) << 24;
 }
 
+std::string Uint32ToBytes(ByteOrder byte_order, uint32_t num) {
+  std::string bytes(4, 0);
+  if (byte_order == kLittleEndian) {
+    bytes[0] = static_cast<uint8_t>(num);
+    bytes[1] = static_cast<uint8_t>(num >> 8);
+    bytes[2] = static_cast<uint8_t>(num >> 16);
+    bytes[3] = static_cast<uint8_t>(num >> 24);
+  } else {
+    bytes[3] = static_cast<uint8_t>(num);
+    bytes[2] = static_cast<uint8_t>(num >> 8);
+    bytes[1] = static_cast<uint8_t>(num >> 16);
+    bytes[0] = static_cast<uint8_t>(num >> 24);
+  }
+
+  return bytes;
+}
+
+std::string Uint16ToBytes(ByteOrder byte_order, uint16_t num) {
+  std::string bytes(2, 0);
+  if (byte_order == kLittleEndian) {
+    bytes[0] = static_cast<uint8_t>(num);
+    bytes[1] = static_cast<uint8_t>(num >> 8);
+  } else {
+    bytes[1] = static_cast<uint8_t>(num);
+    bytes[0] = static_cast<uint8_t>(num >> 8);
+  }
+
+  return bytes;
+}
+
 int64_t GetNowTimestamp() {
   using namespace std::chrono;
   auto now = system_clock::now().time_since_epoch();
