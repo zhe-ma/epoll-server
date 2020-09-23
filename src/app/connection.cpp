@@ -14,11 +14,12 @@ namespace app {
 Connection::Connection()
     : fd_(-1)
     , timestamp_(0)
-    , is_listen_socket_(false)
+    , type_(kTypeSocket)
     , remote_port_(-1)
     , recv_header_(Message::kHeaderLen, 0)
     , recv_header_len_(0)
-    , recv_data_len_(0) {
+    , recv_data_len_(0)
+    , sended_len_(0) {
 }
 
 Connection::~Connection() {
@@ -33,11 +34,17 @@ void Connection::Close() {
   timestamp_.store(0, std::memory_order_relaxed);
 
   fd_ = -1;
-  is_listen_socket_ = false;
+  type_ = kTypeSocket;
   remote_ip_.clear();
   remote_port_ = -1;
   recv_header_len_ = 0;
   recv_data_len_ = 0;
+  sended_len_ = 0;
+}
+
+void Connection::SetSendData(std::string&& send_data, size_t sended_len) {
+  send_data_ = std::move(send_data);
+  sended_len_ = sended_len;
 }
 
 void Connection::UpdateTimestamp() {
@@ -46,13 +53,11 @@ void Connection::UpdateTimestamp() {
 }
 
 int64_t Connection::GetTimestamp() const {
-  int64_t a = timestamp_.load(std::memory_order_relaxed);
-  return a;
+  return timestamp_.load(std::memory_order_relaxed);
 }
 
 int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
-  if (fd_ <= 0) {
-    SPDLOG_CRITICAL("The listening socket fd is reset to {}.", fd_);
+  if (type_ != kTypeAcceptor) {
     return -1;
   }
 
@@ -80,11 +85,14 @@ int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
 }
 
 bool Connection::HandleRead(MessagePtr* msg) {
-  // Msg Bytes: DataLen(LittleEndian) + MsgCode(LittleEndian) + CRC32(LittleEndian) + Data.
+  if (type_ != kTypeSocket) {
+    return false;
+  }
 
+  // Msg Bytes: DataLen(LittleEndian) + MsgCode(LittleEndian) + CRC32(LittleEndian) + Data.
   // Receive header.
   if (recv_header_len_ < Message::kHeaderLen) {
-    int n = Recv(&recv_header_[0] + recv_header_len_, Message::kHeaderLen - recv_header_len_);
+    int n = sock::Recv(fd_, &recv_header_[0] + recv_header_len_, Message::kHeaderLen - recv_header_len_);
     if (n < 0) {
       return false;
     } else if (n == 0) {
@@ -110,7 +118,7 @@ bool Connection::HandleRead(MessagePtr* msg) {
   }
 
   // Recveive data.
-  int n = Recv(&recv_data_[0] + recv_data_len_, recv_data_.size() - recv_data_len_);
+  int n = sock::Recv(fd_, &recv_data_[0] + recv_data_len_, recv_data_.size() - recv_data_len_);
   if (n <= 0) {
     return false;
   } else if (n == 0) {
@@ -135,30 +143,36 @@ bool Connection::HandleRead(MessagePtr* msg) {
   return true;
 }
 
-void Connection::HandleWrite() {
+bool Connection::HandleWrite() {
+  if (type_ != kTypeSocket) {
+    return false;
+  }
+
+  if (send_data_.empty()) {
+    return true;
+  }
+
+  size_t buf_size = send_data_.size() - sended_len_;
+  int n = sock::Send(fd_, &send_data_[0] + sended_len_, buf_size, &sended_len_);
+  // Send data completely.
+  if (n > 0) {
+    return true;
+  }
+
+  // Failed to send data or send data partly.
+  return false;
 }
 
-int Connection::Recv(char* buf, size_t buf_len) {
-  ssize_t n = recv(fd_, buf, buf_len, 0);
-
-  // 对端的socket已正常关闭。
-  if (n == 0) {
-    SPDLOG_TRACE("Remote socket close. Remote addr: {}:{}.", remote_ip_, remote_port_);
-    return -1;
+void Connection::HandleWakeUp() {
+  if (type_ != kTypeEventFd) {
+    return;
   }
 
-  if (n > 0) {
-    return n;
+  uint64_t one = 1;
+  ssize_t n = read(fd_, &one, sizeof(one));
+  if (n != sizeof(one)) {
+    SPDLOG_ERROR("Failed to HandleWakeUp.");
   }
-
-  // EAGAIN这个操作可能等下重试后可用。它的另一个名字叫做EWOULDAGAIN。
-  int err = errno;
-  if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
-    return 0;
-  }
-
-  SPDLOG_WARN("Failed to recv data. RemoteAddr:{}. Error: {}-{}.", remote_ip_, err, strerror(err));
-  return -1;
 }
 
 }  // namespace app

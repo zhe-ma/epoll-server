@@ -66,6 +66,57 @@ bool SetReuseAddr(int fd) {
   return true;
 }
 
+int Recv(int fd, char* buf, size_t buf_len) {
+  ssize_t n = recv(fd, buf, buf_len, 0);
+
+  // 对端的socket已正常关闭。
+  if (n == 0) {
+    SPDLOG_TRACE("Remote socket close.");
+    return -1;
+  }
+
+  if (n > 0) {
+    return n;
+  }
+
+  // EAGAIN这个操作可能等下重试后可用。它的另一个名字叫做EWOULDAGAIN。
+  int err = errno;
+  if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
+    return 0;
+  }
+
+  SPDLOG_WARN("Failed to recv data. Error: {}-{}.", err, strerror(err));
+  return -1;
+}
+
+int Send(int fd, const char* buf, size_t buf_len, size_t* sended_size) {
+  assert(sended_size != nullptr);
+
+  *sended_size = 0;
+  while (buf_len > *sended_size) {
+    int n = send(fd, buf + *sended_size, buf_len - *sended_size, 0);
+    if (n > 0) {
+      *sended_size += n;
+      continue;
+    }
+
+    int err = errno;    
+    if (n == -1 && err == EINTR) {
+      continue;
+    }
+
+    // 发送缓冲区满了，需要等待可写事件才能继续往发送缓冲区里写数据。
+    if (n == -1 && (err == EAGAIN || err == EWOULDBLOCK)) {
+      return 0;
+    }
+
+    SPDLOG_WARN("Send error: {}:{}.", err, strerror(err));
+    return -1;
+  }
+
+  return 1;
+}
+
 }  // namespace sock
 
 inline uint16_t CharToUint16(char c) {

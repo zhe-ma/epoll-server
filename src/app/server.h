@@ -1,6 +1,7 @@
 #ifndef APP_SERVER_H_
 #define APP_SERVER_H_
 
+#include <memory>
 #include <vector>
 #include <unordered_map>
 
@@ -34,7 +35,8 @@ private:
   void HandleRead(Connection* conn);
 
   void HandleRequest(MessagePtr request);
-  void HandleResponse(MessagePtr response);
+
+  void HandlePendingResponses();
 
   // Trigger a epoll event and wake up epoll_wait.
   void WakeUp();
@@ -51,6 +53,9 @@ private:
   ConnectionPool connection_pool_;
 
   ThreadPool<Message> request_thread_pool_;
+
+  std::mutex pending_response_mutex_;
+  std::vector<MessagePtr> pending_responses_;
 
   // The key is Message Code.
   std::unordered_map<uint16_t, RouterPtr> routers_;

@@ -50,7 +50,7 @@ bool Server::Start() {
 
   Connection* conn = connection_pool_.Get();
   conn->set_fd(listen_fd_);
-  conn->set_is_listen_socket(true);
+  conn->set_type(Connection::kTypeAcceptor);
 
   if (!UpdateEpollEvent(listen_fd_, conn, EPOLL_CTL_ADD, true, false)) {
     connection_pool_.Release(conn);
@@ -189,12 +189,22 @@ bool Server::PollOnce(int waiting_ms) {
     }
 
     if (events & EPOLLIN) {
-      conn->is_listen_socket() ? HandleAccpet(conn) : HandleRead(conn);
+      if (conn->type() == Connection::kTypeAcceptor) {
+        HandleAccpet(conn);
+      } else if (conn->type() == Connection::kTypeSocket) {
+        HandleRead(conn);
+      } else if (conn->type() == Connection::kTypeEventFd) {
+        conn->HandleWakeUp();
+      }
 
     } else if (events & EPOLLOUT) {
-      conn->HandleWrite();
+      if (conn->HandleWrite()) {
+        // UpdateEpollEvent();
+      }
     }
   }
+
+  HandlePendingResponses();
 
   return true;
 }
@@ -286,56 +296,54 @@ void Server::HandleRequest(MessagePtr request) {
 
   std::string response_data = router->HandleRequest(request);
   MessagePtr response = std::make_shared<Message>(request->conn(), request->code, std::move(response_data));
+
+  {
+    std::lock_guard<std::mutex> lock(pending_response_mutex_);
+    pending_responses_.push_back(std::move(response));
+  }
+
+  WakeUp();
 }
 
-void Server::HandleResponse(MessagePtr response) {
-  if (!response) {
-    return;
+void Server::HandlePendingResponses() {
+  std::vector<MessagePtr> responses;
+  {
+    std::lock_guard<std::mutex> lock(pending_response_mutex_);
+    responses.swap(pending_responses_);
   }
 
-  SPDLOG_TRACE("Handle Response: {}", response->data);
-
-  // TODO: Check expiration.
-
-  Connection* conn = response->conn();
-  if (conn == nullptr) {
-    return;
-  }
-
-  // TODO: Check event-driven send.
-
-  std::string buf = std::move(response->Pack());
-  size_t len = buf.size();
-  size_t sended_size = 0;
-
-  while (len > sended_size) {
-    int n = send(conn->fd(), &buf[0] + sended_size, len-sended_size, 0);
-    if (n > 0) {
-      sended_size += n;
+  for (auto response : responses) {
+    if (!response) {
       continue;
     }
 
-    int err = errno;    
-    if (n == -1 && err == EINTR) {
+    SPDLOG_TRACE("Handle Response: {}", response->data);
+
+    // // TODO: Check expiration.
+
+    Connection* conn = response->conn();
+    if (conn == nullptr) {
       continue;
     }
 
-    if (n == -1 && (err == EAGAIN || err == EWOULDBLOCK)) {
-      // 发送缓冲区满了，需要等待可写事件才能继续往发送缓冲区里写数据。
-      return;
+    std::string buf = std::move(response->Pack());
+    size_t sended_size = 0;
+    int n = sock::Send(conn->fd(), &buf[0], buf.size(), &sended_size);
+    if (n == -1) {
+      SPDLOG_ERROR("Failed to send data.");
+    } else if (n == 0) {
+       // 发送缓冲区满了，需要等待可写事件才能继续往发送缓冲区里写数据。
+      // UpdateEpollEvent();
+      conn->SetSendData(std::move(buf), sended_size);
     }
-
-    SPDLOG_WARN("Send error: {}:{}.", err, strerror(err));
-    return;
   }
 }
 
 void Server::WakeUp() {
   uint64_t one = 1;
-  ssize_t n = write(event_fd_, &one, sizeof one);
-  if (n != sizeof one)
-  {
-    LOG_ERROR << "EventLoop::wakeup() writes " << n << " bytes instead of 8";
+  ssize_t n = write(event_fd_, &one, sizeof(one));
+  if (n != sizeof(one)) {
+    SPDLOG_ERROR("Failed to wakeup.");
   }
 }
 

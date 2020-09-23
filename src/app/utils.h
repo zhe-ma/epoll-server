@@ -16,6 +16,16 @@ bool Bind(int fd, unsigned short port);
 
 bool SetReuseAddr(int fd);
 
+// Return > 0: Receiving data count.
+// Return = 0: EAGAIN or EWOULDBLOCK or EINTR.
+// Return = -1: Error.
+int Recv(int fd, char* buf, size_t buf_len);
+
+// Return > 0: Sended data count.
+// Return = 0: EAGAIN or EWOULDBLOCK.
+// Return = -1: Error.
+int Send(int fd, const char* buf, size_t buf_len, size_t* sended_size);
+
 }  // namespace sock
 
 enum ByteOrder {

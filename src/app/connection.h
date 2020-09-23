@@ -13,6 +13,13 @@ namespace app {
 
 class Connection {
 public:
+  enum Type {
+    kTypeAcceptor = 0,
+    kTypeEventFd,
+    kTypeSocket
+  };
+
+public:
   Connection();
 
   ~Connection();
@@ -27,12 +34,12 @@ public:
     return fd_;
   }
 
-  void set_is_listen_socket(bool is_listen_socket) {
-    is_listen_socket_ = is_listen_socket;
+  Type type() const {
+    return type_;
   }
 
-  bool is_listen_socket() const {
-    return is_listen_socket_;
+  void set_type(Type type) {
+    type_ = type;
   }
 
   void set_remote_ip(const std::string& remote_ip) {
@@ -51,6 +58,8 @@ public:
     return remote_port_;
   }
 
+  void SetSendData(std::string&& send_data, size_t sended_len);
+
   void UpdateTimestamp();
 
   int64_t GetTimestamp() const;
@@ -62,14 +71,13 @@ public:
   // Return false if client closed or some read errors occurred.
   bool HandleRead(MessagePtr* msg);
 
-  void HandleWrite();
+  bool HandleWrite();
 
-private:
-  int Recv(char* buf, size_t buf_len);
+  void HandleWakeUp();
 
 private:
   int fd_;
-  bool is_listen_socket_;
+  Type type_;
 
   std::atomic<int64_t> timestamp_;  // Millsecond.
 
@@ -81,6 +89,9 @@ private:
 
   std::string recv_data_;
   size_t recv_data_len_;
+
+  std::string send_data_;
+  size_t sended_len_;
 };
 
 }  // namespace app
