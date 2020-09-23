@@ -1,8 +1,9 @@
 #include "app/server.h"
 
 #include <unistd.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/eventfd.h>
 #include <sys/errno.h>
 
 #include "app/crc32.h"
@@ -21,6 +22,7 @@ Server::Server(unsigned short port)
     : port_(port)
     , listen_fd_(-1)
     , epoll_fd_(-1)
+    , event_fd_(-1)
     , epoll_events_(MAX_EPOLL_EVENTS)
     , connection_pool_(MAX_CONNECTION_POLL_SIZE) {
 }
@@ -47,7 +49,7 @@ bool Server::Start() {
   }
 
   Connection* conn = connection_pool_.Get();
-  conn->set_socket_fd(listen_fd_);
+  conn->set_fd(listen_fd_);
   conn->set_is_listen_socket(true);
 
   if (!UpdateEpollEvent(listen_fd_, conn, EPOLL_CTL_ADD, true, false)) {
@@ -55,14 +57,17 @@ bool Server::Start() {
     return false;
   }
 
+  event_fd_ = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  if (event_fd_ == -1) {
+    SPDLOG_ERROR("Failed to create eventfd instance.");
+    close(listen_fd_);
+    close(event_fd_);
+    return false;
+  }
+
   // TODO: configurable.
   request_thread_pool_.Start(4, [this](MessagePtr msg) {
     HandleRequest(msg);
-  });
-
-  // Only use one thread to send msg.
-  response_thread_pool_.Start(1, [this](MessagePtr msg) {
-    HandleResponse(msg);
   });
 
   // TODO: delete conn.
@@ -73,7 +78,6 @@ bool Server::Start() {
   }
 
   request_thread_pool_.StopAndWait();
-  response_thread_pool_.StopAndWait();
 
   return true;
 }
@@ -173,7 +177,7 @@ bool Server::PollOnce(int waiting_ms) {
 
     // 如果epoll_wait拿到多个事件，第一个事件由于业务需要将conn->socket_fd置为-1。
     // 而第二个事件还是这个连接，那个这个连接就属于过期的事件。
-    if (conn->socket_fd() == -1) {
+    if (conn->fd() == -1) {
       SPDLOG_DEBUG("Expired event.");
       continue;
     }
@@ -230,7 +234,7 @@ void Server::HandleAccpet(Connection* conn) {
     return;
   }
 
-  new_conn->set_socket_fd(fd);
+  new_conn->set_fd(fd);
   new_conn->set_remote_ip(remote_ip);
   new_conn->set_remote_port(remote_port);
 
@@ -305,7 +309,7 @@ void Server::HandleResponse(MessagePtr response) {
   size_t sended_size = 0;
 
   while (len > sended_size) {
-    int n = send(conn->socket_fd(), &buf[0] + sended_size, len-sended_size, 0);
+    int n = send(conn->fd(), &buf[0] + sended_size, len-sended_size, 0);
     if (n > 0) {
       sended_size += n;
       continue;
@@ -326,27 +330,13 @@ void Server::HandleResponse(MessagePtr response) {
   }
 }
 
-  // size_t sended = 0;
-        // n = send(c->fd, buff, size, 0); //send()系统函数， 最后一个参数flag，一般为0； 
-
-  //   while (len > sended) {
-  //       ssize_t wd = writeImp(channel_->fd(), buf + sended, len - sended);
-  //       trace("channel %lld fd %d write %ld bytes", (long long) channel_->id(), channel_->fd(), wd);
-  //       if (wd > 0) {
-  //           sended += wd;
-  //           continue;
-  //       } else if (wd == -1 && errno == EINTR) {
-  //           continue;
-  //       } else if (wd == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-  //           if (!channel_->writeEnabled()) {
-  //               channel_->enableWrite(true);
-  //           }
-  //           break;
-  //       } else {
-  //           error("write error: channel %lld fd %d wd %ld %d %s", (long long) channel_->id(), channel_->fd(), wd, errno, strerror(errno));
-  //           break;
-  //       }
-  //   }
-  //   return sended;
+void Server::WakeUp() {
+  uint64_t one = 1;
+  ssize_t n = write(event_fd_, &one, sizeof one);
+  if (n != sizeof one)
+  {
+    LOG_ERROR << "EventLoop::wakeup() writes " << n << " bytes instead of 8";
+  }
+}
 
 }  // namespace app

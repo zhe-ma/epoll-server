@@ -12,7 +12,7 @@
 namespace app {
 
 Connection::Connection()
-    : socket_fd_(-1)
+    : fd_(-1)
     , timestamp_(0)
     , is_listen_socket_(false)
     , remote_port_(-1)
@@ -26,13 +26,13 @@ Connection::~Connection() {
 }
 
 void Connection::Close() {
-  if (socket_fd_ != -1) {
-    close(socket_fd_);
+  if (fd_ != -1) {
+    close(fd_);
   }
 
   timestamp_.store(0, std::memory_order_relaxed);
 
-  socket_fd_ = -1;
+  fd_ = -1;
   is_listen_socket_ = false;
   remote_ip_.clear();
   remote_port_ = -1;
@@ -51,8 +51,8 @@ int64_t Connection::GetTimestamp() const {
 }
 
 int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
-  if (socket_fd_ <= 0) {
-    SPDLOG_CRITICAL("The listening socket fd is reset to {}.", socket_fd_);
+  if (fd_ <= 0) {
+    SPDLOG_CRITICAL("The listening socket fd is reset to {}.", fd_);
     return -1;
   }
 
@@ -63,7 +63,7 @@ int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
   }
 
   // 将listen socket设置为非阻塞，防止该函数阻塞太久。
-  int fd = accept(socket_fd_, (struct sockaddr*)sock_addr, &sock_len);
+  int fd = accept(fd_, (struct sockaddr*)sock_addr, &sock_len);
   if (fd != -1) {
     return fd;
   }
@@ -139,7 +139,7 @@ void Connection::HandleWrite() {
 }
 
 int Connection::Recv(char* buf, size_t buf_len) {
-  ssize_t n = recv(socket_fd_, buf, buf_len, 0);
+  ssize_t n = recv(fd_, buf, buf_len, 0);
 
   // 对端的socket已正常关闭。
   if (n == 0) {

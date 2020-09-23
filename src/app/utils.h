@@ -2,6 +2,7 @@
 #define APP_UTILS_H_
 
 #include <cstdint>
+#include <string>
 
 namespace app {
 

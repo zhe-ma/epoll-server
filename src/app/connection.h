@@ -19,12 +19,12 @@ public:
 
   void Close();
 
-  void set_socket_fd(int socket_fd) {
-    socket_fd_ = socket_fd;
+  void set_fd(int fd) {
+    fd_ = fd;
   }
 
-  int socket_fd() const {
-    return socket_fd_;
+  int fd() const {
+    return fd_;
   }
 
   void set_is_listen_socket(bool is_listen_socket) {
@@ -68,7 +68,7 @@ private:
   int Recv(char* buf, size_t buf_len);
 
 private:
-  int socket_fd_;
+  int fd_;
   bool is_listen_socket_;
 
   std::atomic<int64_t> timestamp_;  // Millsecond.
