@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "app/connection.h"
 #include "app/connection_pool.h"
 #include "app/epoller.h"
 #include "app/thread_pool.h"
@@ -42,7 +43,10 @@ private:
   unsigned short port_;
 
   int acceptor_fd_;
-  int event_fd_;
+  std::unique_ptr<Connection> acceptor_connection_;
+
+  int wakener_fd_;
+  std::unique_ptr<Connection> wakener_connection_;
 
   Epoller epoller_;
 

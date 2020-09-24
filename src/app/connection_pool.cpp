@@ -6,15 +6,15 @@ namespace app {
 
 ConnectionPool::ConnectionPool(size_t size) {
   for (std::size_t i = 0; i < size; ++i) {
-    poll_.push_back(new Connection);
+    pool_.push_back(new Connection);
   }
 }
 
 ConnectionPool::~ConnectionPool() {
-  for (Connection* conn : poll_) {
+  for (Connection* conn : pool_) {
     delete conn;
   }
-  poll_.clear();
+  pool_.clear();
 }
 
 Connection* ConnectionPool::Get() {
@@ -22,14 +22,14 @@ Connection* ConnectionPool::Get() {
     return nullptr;
   }
 
-  Connection* conn = poll_.front();
+  Connection* conn = pool_.front();
   if (conn == nullptr) {
     return nullptr;
   }
 
   conn->UpdateTimestamp();
 
-  poll_.pop_front();
+  pool_.pop_front();
   return conn;
 }
 
@@ -40,15 +40,15 @@ void ConnectionPool::Release(Connection* conn) {
 
   conn->Close();
 
-  poll_.push_back(conn);
+  pool_.push_back(conn);
 }
 
 size_t ConnectionPool::Size() const {
-  return poll_.size();
+  return pool_.size();
 }
 
 bool ConnectionPool::Empty() const {
-  return poll_.empty();
+  return pool_.empty();
 }
 
 }  // namespace app

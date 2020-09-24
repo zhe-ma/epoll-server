@@ -15,12 +15,12 @@ class Connection {
 public:
   enum Type {
     kTypeAcceptor = 0,
-    kTypeEventFd,
+    kTypeWakener,
     kTypeSocket
   };
 
 public:
-  Connection();
+  Connection(int fd = -1, Type type = kTypeSocket);
 
   ~Connection();
 

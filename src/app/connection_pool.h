@@ -23,7 +23,7 @@ public:
   bool Empty() const;
 
 private:
-  std::deque<Connection*> poll_;
+  std::deque<Connection*> pool_;
 };
 
 }  // namespace app

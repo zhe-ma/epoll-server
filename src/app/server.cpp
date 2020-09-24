@@ -20,11 +20,15 @@ const size_t MAX_CONNECTION_POLL_SIZE = 1024;
 Server::Server(unsigned short port)
     : port_(port)
     , acceptor_fd_(-1)
-    , event_fd_(-1)
+    , wakener_fd_(-1)
     , connection_pool_(MAX_CONNECTION_POLL_SIZE) {
 }
 
 bool Server::Start() {
+  if (!epoller_.Create()) {
+    return false;
+  }
+
   // SOCK_STREAM: TCP. Sequenced, reliable, connection-based byte streams.
   // SOCK_CLOEXEC: Atomically set close-on-exec flag for the new descriptor(s).
   acceptor_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
@@ -33,41 +37,23 @@ bool Server::Start() {
     return false;
   }
 
-  if (!Listen()) {
-    close(acceptor_fd_);
+  acceptor_connection_.reset(new Connection(acceptor_fd_, Connection::kTypeAcceptor));
+  acceptor_connection_->SetReadEvent(true);
+  if (!epoller_.Add(acceptor_connection_->fd(), acceptor_connection_->epoll_events(),
+      static_cast<void*>(acceptor_connection_.get()))) {
     return false;
   }
 
-  if (!epoller_.Create()) {
-    close(acceptor_fd_);
-    return false;
-  }
-
-  Connection* conn = connection_pool_.Get();
-  conn->set_fd(acceptor_fd_);
-  conn->set_type(Connection::kTypeAcceptor);
-  conn->SetReadEvent(true);
-
-  if (!epoller_.Add(conn->fd(), conn->epoll_events(), static_cast<void*>(conn))) {
-    connection_pool_.Release(conn);
-    return false;
-  }
-
-  event_fd_ = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  if (event_fd_ == -1) {
+  wakener_fd_ = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  if (wakener_fd_ == -1) {
     SPDLOG_ERROR("Failed to create eventfd instance.");
-    close(acceptor_fd_);
-    connection_pool_.Release(conn);
     return false;
   }
 
-  conn = connection_pool_.Get();
-  conn->set_fd(event_fd_);
-  conn->set_type(Connection::kTypeEventFd);
-  conn->SetReadEvent(true);
-
-  if (!epoller_.Add(conn->fd(), conn->epoll_events(), static_cast<void*>(conn))) {
-    connection_pool_.Release(conn);
+  wakener_connection_.reset(new Connection(wakener_fd_, Connection::kTypeWakener));
+  wakener_connection_->SetReadEvent(true);
+  if (!epoller_.Add(wakener_connection_->fd(), wakener_connection_->epoll_events(),
+      static_cast<void*>(wakener_connection_.get()))) {
     return false;
   }
 
@@ -75,6 +61,10 @@ bool Server::Start() {
   request_thread_pool_.Start(4, [this](MessagePtr msg) {
     HandleRequest(msg);
   });
+
+  if (!Listen()) {
+    return false;
+  }
 
   // TODO: delete conn.
   for (;;) {
@@ -153,7 +143,7 @@ bool Server::PollOnce() {
         HandleAccpet(conn);
       } else if (conn->type() == Connection::kTypeSocket) {
         HandleRead(conn);
-      } else if (conn->type() == Connection::kTypeEventFd) {
+      } else if (conn->type() == Connection::kTypeWakener) {
         conn->HandleWakeUp();
       }
 
@@ -304,7 +294,7 @@ void Server::HandlePendingResponses() {
 
 void Server::WakeUp() {
   uint64_t one = 1;
-  ssize_t n = write(event_fd_, &one, sizeof(one));
+  ssize_t n = write(wakener_fd_, &one, sizeof(one));
   if (n != sizeof(one)) {
     SPDLOG_ERROR("Failed to wakeup.");
   }

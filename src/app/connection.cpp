@@ -12,11 +12,11 @@
 
 namespace app {
 
-Connection::Connection()
-    : fd_(-1)
-    , timestamp_(0)
-    , type_(kTypeSocket)
+Connection::Connection(int fd, Type type)
+    : fd_(fd)
+    , type_(type)
     , epoll_events_(0)
+    , timestamp_(0)
     , remote_port_(-1)
     , recv_header_(Message::kHeaderLen, 0)
     , recv_header_len_(0)
@@ -167,7 +167,7 @@ bool Connection::HandleWrite() {
 }
 
 void Connection::HandleWakeUp() {
-  if (type_ != kTypeEventFd) {
+  if (type_ != kTypeWakener) {
     return;
   }
 
