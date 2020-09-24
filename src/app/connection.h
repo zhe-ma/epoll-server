@@ -42,6 +42,10 @@ public:
     type_ = type;
   }
 
+  uint32_t epoll_events() const {
+    return epoll_events_;
+  }
+
   void set_remote_ip(const std::string& remote_ip) {
     remote_ip_ = remote_ip;
   }

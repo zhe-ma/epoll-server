@@ -23,8 +23,6 @@ public:
 
   void AddRouter(uint16_t msg_code, RouterPtr router);
 
-  bool UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write);
-
 private:
   bool Listen();
 
@@ -43,7 +41,7 @@ private:
 private:
   unsigned short port_;
 
-  int listen_fd_;
+  int acceptor_fd_;
   int event_fd_;
 
   Epoller epoller_;

@@ -55,4 +55,32 @@ const struct epoll_event& Epoller::GetEvent(size_t index) const {
   return events_[index];
 }
 
+bool Epoller::Add(int target_fd, uint32_t events, void* ptr) {
+  struct epoll_event ev;
+  memset(&ev, 0, sizeof(ev));
+  ev.events = events;
+  ev.data.ptr = ptr;
+
+  if(epoll_ctl(fd_, EPOLL_CTL_ADD, target_fd, &ev) == -1) {
+    SPDLOG_ERROR("Failed to add epoll event. Error:{}-{}.", errno, strerror(errno));
+    return false;
+  }
+
+  return true;
+}
+
+bool Epoller::Modify(int target_fd, uint32_t events, void* ptr) {
+  struct epoll_event ev;
+  memset(&ev, 0, sizeof(ev));
+  ev.events = events;
+  ev.data.ptr = ptr;
+
+  if(epoll_ctl(fd_, EPOLL_CTL_MOD, target_fd, &ev) == -1) {
+    SPDLOG_ERROR("Failed to update epoll event. Error:{}-{}.", errno, strerror(errno));
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace app

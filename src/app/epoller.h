@@ -23,6 +23,12 @@ public:
 
   const struct epoll_event& GetEvent(size_t index) const;
 
+  // Register the target fd on the epoll instance.
+  bool Add(int target_fd, uint32_t events, void* ptr);
+
+  // Change the the event of target fd.
+  bool Modify(int target_fd, uint32_t events, void* ptr);
+
 private:
   int fd_;
   struct epoll_event events_[kMaxEpollEvents];

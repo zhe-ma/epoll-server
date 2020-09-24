@@ -19,7 +19,7 @@ const size_t MAX_CONNECTION_POLL_SIZE = 1024;
 
 Server::Server(unsigned short port)
     : port_(port)
-    , listen_fd_(-1)
+    , acceptor_fd_(-1)
     , event_fd_(-1)
     , connection_pool_(MAX_CONNECTION_POLL_SIZE) {
 }
@@ -27,27 +27,28 @@ Server::Server(unsigned short port)
 bool Server::Start() {
   // SOCK_STREAM: TCP. Sequenced, reliable, connection-based byte streams.
   // SOCK_CLOEXEC: Atomically set close-on-exec flag for the new descriptor(s).
-  listen_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
-  if (listen_fd_ == -1) {
+  acceptor_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+  if (acceptor_fd_ == -1) {
     SPDLOG_ERROR("Failed to create socket.");
     return false;
   }
 
   if (!Listen()) {
-    close(listen_fd_);
+    close(acceptor_fd_);
     return false;
   }
 
   if (!epoller_.Create()) {
-    close(listen_fd_);
+    close(acceptor_fd_);
     return false;
   }
 
   Connection* conn = connection_pool_.Get();
-  conn->set_fd(listen_fd_);
+  conn->set_fd(acceptor_fd_);
   conn->set_type(Connection::kTypeAcceptor);
+  conn->SetReadEvent(true);
 
-  if (!UpdateEpollEvent(listen_fd_, conn, EPOLL_CTL_ADD, true, false)) {
+  if (!epoller_.Add(conn->fd(), conn->epoll_events(), static_cast<void*>(conn))) {
     connection_pool_.Release(conn);
     return false;
   }
@@ -55,8 +56,18 @@ bool Server::Start() {
   event_fd_ = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   if (event_fd_ == -1) {
     SPDLOG_ERROR("Failed to create eventfd instance.");
-    close(listen_fd_);
-    close(event_fd_);
+    close(acceptor_fd_);
+    connection_pool_.Release(conn);
+    return false;
+  }
+
+  conn = connection_pool_.Get();
+  conn->set_fd(event_fd_);
+  conn->set_type(Connection::kTypeEventFd);
+  conn->SetReadEvent(true);
+
+  if (!epoller_.Add(conn->fd(), conn->epoll_events(), static_cast<void*>(conn))) {
+    connection_pool_.Release(conn);
     return false;
   }
 
@@ -81,54 +92,28 @@ void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
   routers_[msg_code] = router;
 }
 
-// EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。
-// EPOLLOUT: socket可以写。
-// EPOLLPRI: socket紧急的数据(带外数据到来)可读。
-// EPOLLERR: 客户端socket发生错误, 断电之类的断开，server端并不会在这种情况收到该事件。
-// EPOLLRDHUP: 读关闭，2.6.17之后版本内核，对端连接断开(close()，kill，ctrl+c)触发的epoll事件会包含EPOLLIN|EPOLLRDHUP。
-// EPOLLHUP: 读写都关闭
-// EPOLLET: 将EPOLL设为边缘触发(Edge Triggered)模式。
-bool Server::UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, bool read, bool write) {
-  struct epoll_event ev;
-  memset(&ev, 0, sizeof(ev));
- 
-  if (read) {
-   ev.events = EPOLLIN|EPOLLRDHUP;
-  } else if(write) {
-  }
-  
-  ev.data.ptr = conn;
-
-  // if(epoll_ctl(epoll_fd_, event_type, socket_fd, &ev) == -1) {
-  //   SPDLOG_ERROR("Failed to update epoll events. Error:{}-{}。", errno, strerror(errno));
-  //   return false;
-  // }
-
-  return true;
-}
-
 bool Server::Listen() {
   SPDLOG_TRACK_METHOD;
 
   // 打开SO_REUSEADDR选项，防止TIME_WAIT时bind失败的问题.
-  if (!sock::SetReuseAddr(listen_fd_)) {
+  if (!sock::SetReuseAddr(acceptor_fd_)) {
     SPDLOG_ERROR("Failed to set SO_REUSEADDR");
     return false;
   }
 
   // 设置为非阻塞模式，防止accept时阻塞太久。
-  if (!sock::SetNonBlocking(listen_fd_)) {
+  if (!sock::SetNonBlocking(acceptor_fd_)) {
     SPDLOG_ERROR("Faild to set socket to be non-blocking.");
     return false;
   }
 
-  if (!sock::Bind(listen_fd_, port_)) {
+  if (!sock::Bind(acceptor_fd_, port_)) {
     SPDLOG_ERROR("Failed to bind port: {}.", port_);
     return false;
   }
 
   const int kListenBacklog = 511;
-  if (listen(listen_fd_, kListenBacklog) == -1) {
+  if (listen(acceptor_fd_, kListenBacklog) == -1) {
     SPDLOG_ERROR("Failed to listen.");
     return false;
   }
@@ -174,7 +159,8 @@ bool Server::PollOnce() {
 
     } else if (events & EPOLLOUT) {
       if (conn->HandleWrite()) {
-        // UpdateEpollEvent();
+        conn->SetWriteEvent(false);
+        epoller_.Modify(conn->fd(), conn->epoll_events(), static_cast<void*>(conn));
       }
     }
   }
@@ -222,10 +208,11 @@ void Server::HandleAccpet(Connection* conn) {
   new_conn->set_fd(fd);
   new_conn->set_remote_ip(remote_ip);
   new_conn->set_remote_port(remote_port);
+  new_conn->SetReadEvent(true);
 
-  if (!UpdateEpollEvent(fd, new_conn, EPOLL_CTL_ADD, true, false)) {
+  if (!epoller_.Add(new_conn->fd(), new_conn->epoll_events(), static_cast<void*>(new_conn))) {
     SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
-    connection_pool_.Release(new_conn);
+    connection_pool_.Release(conn);
     return;
   }
 }
@@ -307,9 +294,10 @@ void Server::HandlePendingResponses() {
     if (n == -1) {
       SPDLOG_ERROR("Failed to send data.");
     } else if (n == 0) {
-       // 发送缓冲区满了，需要等待可写事件才能继续往发送缓冲区里写数据。
-      // UpdateEpollEvent();
+       // System write buffer is full. It should wait the writable event.
       conn->SetSendData(std::move(buf), sended_size);
+      conn->SetWriteEvent(true);
+      epoller_.Modify(conn->fd(), conn->epoll_events(), static_cast<void*>(conn));
     }
   }
 }

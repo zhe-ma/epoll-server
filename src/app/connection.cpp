@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <arpa/inet.h>
 #include <sys/errno.h>
 
@@ -179,11 +180,18 @@ void Connection::HandleWakeUp() {
 
 void Connection::SetReadEvent(bool enable) {
   if (enable) {
+    epoll_events_ |= (EPOLLIN | EPOLLRDHUP);
+  } else {
+    epoll_events_ &= ~(EPOLLIN | EPOLLRDHUP);
   }
 }
 
 void Connection::SetWriteEvent(bool enable) {
-
+  if (enable) {
+    epoll_events_ |= EPOLLOUT;
+  } else {
+    epoll_events_ &= ~EPOLLOUT;
+  }
 }
 
 }  // namespace app
