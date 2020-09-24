@@ -17,7 +17,8 @@
       ],
       "options": {
         "cwd": "${workspaceFolder}/build"
-      }
+      },
+      "problemMatcher": []
     },
     {
       "label": "make",

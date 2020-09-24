@@ -5,9 +5,8 @@
 #include <vector>
 #include <unordered_map>
 
-#include <sys/epoll.h>
-
 #include "app/connection_pool.h"
+#include "app/epoller.h"
 #include "app/thread_pool.h"
 #include "app/router_base.h"
 #include "app/message.h"
@@ -29,7 +28,7 @@ public:
 private:
   bool Listen();
 
-  bool PollOnce(int waiting_ms);
+  bool PollOnce();
 
   void HandleAccpet(Connection* conn);
   void HandleRead(Connection* conn);
@@ -45,10 +44,9 @@ private:
   unsigned short port_;
 
   int listen_fd_;
-  int epoll_fd_;
   int event_fd_;
 
-  std::vector<struct epoll_event> epoll_events_;
+  Epoller epoller_;
 
   ConnectionPool connection_pool_;
 

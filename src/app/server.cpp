@@ -15,15 +15,12 @@
 namespace app {
 
 // TODO: Configubale
-const size_t MAX_EPOLL_EVENTS = 512;
 const size_t MAX_CONNECTION_POLL_SIZE = 1024;
 
 Server::Server(unsigned short port)
     : port_(port)
     , listen_fd_(-1)
-    , epoll_fd_(-1)
     , event_fd_(-1)
-    , epoll_events_(MAX_EPOLL_EVENTS)
     , connection_pool_(MAX_CONNECTION_POLL_SIZE) {
 }
 
@@ -41,9 +38,7 @@ bool Server::Start() {
     return false;
   }
 
-  epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
-  if (epoll_fd_ == -1) {
-    SPDLOG_ERROR("Failed to create epoll instance.");
+  if (!epoller_.Create()) {
     close(listen_fd_);
     return false;
   }
@@ -72,7 +67,7 @@ bool Server::Start() {
 
   // TODO: delete conn.
   for (;;) {
-    if (!PollOnce(-1)) {
+    if (!PollOnce()) {
       return false;
     }
   }
@@ -104,10 +99,10 @@ bool Server::UpdateEpollEvent(int socket_fd, Connection* conn, int event_type, b
   
   ev.data.ptr = conn;
 
-  if(epoll_ctl(epoll_fd_, event_type, socket_fd,&ev) == -1) {
-    SPDLOG_ERROR("Failed to update epoll events. Error:{}-{}。", errno, strerror(errno));
-    return false;
-  }
+  // if(epoll_ctl(epoll_fd_, event_type, socket_fd, &ev) == -1) {
+  //   SPDLOG_ERROR("Failed to update epoll events. Error:{}-{}。", errno, strerror(errno));
+  //   return false;
+  // }
 
   return true;
 }
@@ -141,35 +136,15 @@ bool Server::Listen() {
   return true;
 }
 
-bool Server::PollOnce(int waiting_ms) {
-  // 等待事件，最多返回MAX_EPOLL_EVENTS个。
-  // waiting_ms = -1时，一直阻塞直到收到事件。
-  // waiting_ms > 0 时，阻塞时间到达或者阻塞时收到事件都会返回。
-  // 返回值n，收到的事件数。
-  int n = epoll_wait(epoll_fd_, &epoll_events_[0], epoll_events_.size(), waiting_ms);
-
-  // n = -1, 有错误产生。
+bool Server::PollOnce() {
+  int n = epoller_.Poll();
   if (n == -1 ) {
-    SPDLOG_ERROR("Failed to epoll wait. Error: {}-{}.", errno, strerror(errno));
-    // EINTR: Interrupted system call, epoll_wait被更高级的系统调用打断, 错误可以忽略。
-    // 其他错误则提出。
-    return errno == EINTR;
+    return false;
   }
 
-  // n = 0, 超时。
-  if (n == 0) {
-    // waiting_ms = -1时，一直阻塞等待有事件才返回，如果此时返回n=0, 则存在问题。
-    if (waiting_ms == -1) {
-      SPDLOG_ERROR("No events receieved when epoll_wait timeout.");
-      return false;
-    }
-
-    return true;
-  }
-
-  // n > 0
   for (int i = 0; i < n; ++i) {
-    Connection* conn = static_cast<Connection*>(epoll_events_[i].data.ptr);
+    auto event = epoller_.GetEvent(i);
+    Connection* conn = static_cast<Connection*>(event.data.ptr);
     if (conn == nullptr) {
       SPDLOG_WARN("Unexpected epoll event.");
       continue;
@@ -182,7 +157,7 @@ bool Server::PollOnce(int waiting_ms) {
       continue;
     }
 
-    int events = epoll_events_[i].events;
+    int events = event.events;
     // 如果收到EPOLLERR或者EPOLLRDHUP，socket断掉，则在HanldeRead和HandleWrite中进行处理。
     if (events & (EPOLLERR | EPOLLRDHUP) ) {
       events |= EPOLLIN | EPOLLOUT; 

@@ -75,9 +75,14 @@ public:
 
   void HandleWakeUp();
 
+  void SetReadEvent(bool enable);
+  void SetWriteEvent(bool enable);
+
 private:
   int fd_;
   Type type_;
+
+  uint32_t epoll_events_;
 
   std::atomic<int64_t> timestamp_;  // Millsecond.
 

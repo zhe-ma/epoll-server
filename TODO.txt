@@ -51,6 +51,28 @@ TODO:
 
 30. 学习zinx 连接管理。
 
+31. Refine pollonce.
+
+32. listen_socket rename acceptor.
+
+33. 将listen socket 和 eventfd不要从conenctionpool创建。
+
+34. handlerequest时不要处理超时，写的时候处理可以减少原子的使用。
+
+35. epoll 操作epoller.
+
+36. 整理笔记时，将注释放到笔记。
+  // EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。
+  // EPOLLOUT: socket可以写。
+  // EPOLLPRI: socket紧急的数据(带外数据到来)可读。
+  // EPOLLERR: 客户端socket发生错误, 断电之类的断开，server端并不会在这种情况收到该事件。
+  // EPOLLRDHUP: 读关闭，2.6.17之后版本内核，对端连接断开(close()，kill，ctrl+c)触发的epoll事件会包含EPOLLIN|EPOLLRDHUP。
+  // EPOLLHUP: 读写都关闭
+  // EPOLLET: 将EPOLL设为边缘触发(Edge Triggered)模式。
+37. 注释改为英文。
+
+
+
 ==========================================================================
 DONE:
 

@@ -15,6 +15,7 @@ Connection::Connection()
     : fd_(-1)
     , timestamp_(0)
     , type_(kTypeSocket)
+    , epoll_events_(0)
     , remote_port_(-1)
     , recv_header_(Message::kHeaderLen, 0)
     , recv_header_len_(0)
@@ -35,6 +36,7 @@ void Connection::Close() {
 
   fd_ = -1;
   type_ = kTypeSocket;
+  epoll_events_ = 0;
   remote_ip_.clear();
   remote_port_ = -1;
   recv_header_len_ = 0;
@@ -173,6 +175,15 @@ void Connection::HandleWakeUp() {
   if (n != sizeof(one)) {
     SPDLOG_ERROR("Failed to HandleWakeUp.");
   }
+}
+
+void Connection::SetReadEvent(bool enable) {
+  if (enable) {
+  }
+}
+
+void Connection::SetWriteEvent(bool enable) {
+
 }
 
 }  // namespace app
