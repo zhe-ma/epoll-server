@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// go  test  test/client -run ^TestMessage$ -count=1 -v
+
 func TestConnection(t *testing.T) {
 	c, _ := net.Dial("tcp4", "127.0.0.1:9005")
 	c1, _ := net.Dial("tcp4", "127.0.0.1:9005")

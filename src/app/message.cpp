@@ -20,10 +20,10 @@ Message::Message()
 Message::Message(Connection* conn, uint16_t code_, std::string&& data_) {\
   assert(conn != nullptr);
 
+  data = std::move(data_);
   data_len = static_cast<uint16_t>(data.size());
   code = code_;
-  crc32 = CalcCRC32(data_);
-  data = std::move(data_);
+  crc32 = CalcCRC32(data);
   conn_ = conn;
   conn_timestamp_ = conn_->GetTimestamp();
 }

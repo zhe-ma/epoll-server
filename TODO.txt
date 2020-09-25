@@ -6,12 +6,10 @@ TODO:
 2. 测试SignalHandler。
 3. 测试
 4. InitSignal和CreateDaemon的调用顺序
-5. 为什么要设置为非阻塞模式？？？？？？
 6. TODO: delete conn.
 7. TODO: configurable.
 8. configurable size_t MAX_EPOLL_EVENTS,MAX_CONNECTION_POLL_SIZE;
-9. ConnectionPoll作为单例?
-10. Epoller 封装epoll动作?
+
 12. Connection依赖Server, Server依赖ConnectionPool,ConnectionPoll依赖Connection，解耦？
 13. Delete iostream output
 14. console log configurable
@@ -29,7 +27,7 @@ TODO:
 
 20. accept(socket_fd_, (struct sockaddr*)&sock_addr, &sock_len);第二个参数能否为空。
 
-21. 测试msg(std::move(msg_))是否将msg的值move了\
+21. 测试msg(std::move(msg_))是否将msg的值move了
 
 22. thread safe queue可以使用circleQueue。
 
@@ -89,3 +87,9 @@ DONE:
 18. Revisit folder.
 
 11. client 测试。
+
+9. ConnectionPoll作为单例?
+
+10. Epoller 封装epoll动作?
+
+5. 为什么要设置为非阻塞模式？？？？？？
