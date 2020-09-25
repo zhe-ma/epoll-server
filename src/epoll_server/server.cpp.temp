@@ -1,4 +1,4 @@
-#include "app/server.h"
+#include "epoll_server/server.h"
 
 #include <unistd.h>
 #include <signal.h>
@@ -6,11 +6,11 @@
 
 #include <iostream>
 
-#include "app/config.h"
-#include "app/logging.h"
-#include "app/process.h"
+#include "epoll_server/config.h"
+#include "epoll_server/logging.h"
+#include "epoll_server/process.h"
 
-namespace app {
+namespace epoll_server {
 
 namespace {
 
@@ -227,4 +227,4 @@ bool Server::Start() {
   return true;
 }
 
-}  // namespace app
+}  // namespace epoll_server

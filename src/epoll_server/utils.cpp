@@ -1,4 +1,4 @@
-#include "app/utils.h"
+#include "epoll_server/utils.h"
 
 #include <chrono>
 
@@ -8,9 +8,9 @@
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
 
-#include "app/logging.h"
+#include "epoll_server/logging.h"
 
-namespace app {
+namespace epoll_server {
 
 namespace sock {
 
@@ -181,4 +181,4 @@ int64_t GetNowTimestamp() {
   return duration_cast<milliseconds>(now).count();
 }
 
-}  // app
+}  // namespace epoll_server

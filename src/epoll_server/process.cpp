@@ -1,4 +1,4 @@
-#include "app/process.h"
+#include "epoll_server/process.h"
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -6,9 +6,9 @@
 
 #include <memory>
 
-#include "logging.h"
+#include "epoll_server/logging.h"
 
-namespace app {
+namespace epoll_server {
 
 char** g_argv = nullptr;
 int g_argc = 0;
@@ -124,4 +124,4 @@ int CreateDaemonProcess() {
   return pid;
 }
 
-}  // namespace app
+}  // namespace epoll_server

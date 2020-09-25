@@ -78,6 +78,10 @@ TODO:
 41. 设置该Server的连接创建时Hook函数SetOnConnStart(func(IConnection))
     设置该Server的连接断开时的Hook函数SetOnConnStop(func(IConnection))
 
+42. 简化config和loging初始化的集成。  if (!CONFIG.Load("conf/config.json", &error_msg)) {
+   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
+
+
 ==========================================================================
 DONE:
 

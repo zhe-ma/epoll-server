@@ -1,9 +1,9 @@
-#ifndef APP_EPOLLER_H_
-#define APP_EPOLLER_H_
+#ifndef EPOLL_SERVER_EPOLLER_H_
+#define EPOLL_SERVER_EPOLLER_H_
 
 #include <sys/epoll.h>
 
-namespace app {
+namespace epoll_server {
 
 const size_t kMaxEpollEvents = 1024;
 
@@ -34,6 +34,6 @@ private:
   struct epoll_event events_[kMaxEpollEvents];
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_EPOLLER_H_
+#endif  // EPOLL_SERVER_EPOLLER_H_

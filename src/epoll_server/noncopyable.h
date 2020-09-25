@@ -1,7 +1,7 @@
-#ifndef APP_NONCOPYABLE_H_
-#define APP_NONCOPYABLE_H_
+#ifndef EPOLL_SERVER_NONCOPYABLE_H_
+#define EPOLL_SERVER_NONCOPYABLE_H_
 
-namespace app {
+namespace epoll_server {
 
 class Noncopyable {
 public:
@@ -13,6 +13,6 @@ protected:
   ~Noncopyable() = default;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_CONNECTION_POLL_H_
+#endif  // EPOLL_SERVER_CONNECTION_POLL_H_

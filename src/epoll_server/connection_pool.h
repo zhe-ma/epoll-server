@@ -1,11 +1,11 @@
-#ifndef APP_CONNECTION_POOL_H_
-#define APP_CONNECTION_POOL_H_
+#ifndef EPOLL_SERVER_CONNECTION_POOL_H_
+#define EPOLL_SERVER_CONNECTION_POOL_H_
 
 #include <deque>
 
-#include "app/noncopyable.h"
+#include "epoll_server/noncopyable.h"
 
-namespace app {
+namespace epoll_server {
 
 class Connection;
 
@@ -26,6 +26,6 @@ private:
   std::deque<Connection*> pool_;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_CONNECTION_POOL_H_
+#endif  // EPOLL_SERVER_CONNECTION_POOL_H_

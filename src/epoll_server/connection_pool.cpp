@@ -1,8 +1,8 @@
-#include "app/connection_pool.h"
+#include "epoll_server/connection_pool.h"
 
-#include "app/connection.h"
+#include "epoll_server/connection.h"
 
-namespace app {
+namespace epoll_server {
 
 ConnectionPool::ConnectionPool(size_t size) {
   for (std::size_t i = 0; i < size; ++i) {
@@ -51,4 +51,4 @@ bool ConnectionPool::Empty() const {
   return pool_.empty();
 }
 
-}  // namespace app
+}  // namespace epoll_server

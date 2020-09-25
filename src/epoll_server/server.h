@@ -1,18 +1,18 @@
-#ifndef APP_SERVER_H_
-#define APP_SERVER_H_
+#ifndef EPOLL_SERVER_SERVER_H_
+#define EPOLL_SERVER_SERVER_H_
 
 #include <memory>
 #include <vector>
 #include <unordered_map>
 
-#include "app/connection.h"
-#include "app/connection_pool.h"
-#include "app/epoller.h"
-#include "app/thread_pool.h"
-#include "app/router_base.h"
-#include "app/message.h"
+#include "epoll_server/connection.h"
+#include "epoll_server/connection_pool.h"
+#include "epoll_server/epoller.h"
+#include "epoll_server/thread_pool.h"
+#include "epoll_server/router_base.h"
+#include "epoll_server/message.h"
 
-namespace app {
+namespace epoll_server {
 
 // The network I/O are in the same thread. The business logic is handled in thread pool.
 
@@ -65,6 +65,6 @@ private:
   std::unordered_map<uint16_t, RouterPtr> routers_;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_SERVER_H_
+#endif  // EPOLL_SERVER_SERVER_H_

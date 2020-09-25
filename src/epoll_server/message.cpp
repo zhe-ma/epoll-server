@@ -1,13 +1,13 @@
-#include "app/message.h"
+#include "epoll_server/message.h"
 
 #include <cassert>
 
-#include "app/connection.h"
-#include "app/crc32.h"
-#include "app/utils.h"
-#include "app/logging.h"
+#include "epoll_server/connection.h"
+#include "epoll_server/crc32.h"
+#include "epoll_server/utils.h"
+#include "epoll_server/logging.h"
 
-namespace app {
+namespace epoll_server {
 
 Message::Message()
     : conn_(nullptr)
@@ -93,4 +93,4 @@ std::string Message::Pack() const {
   return buf;
 }
 
-}  // namespace app
+}  // namespace epoll_server

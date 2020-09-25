@@ -1,10 +1,10 @@
-#ifndef APP_MESSAGE_H_
-#define APP_MESSAGE_H_
+#ifndef EPOLL_SERVER_MESSAGE_H_
+#define EPOLL_SERVER_MESSAGE_H_
 
 #include <string>
 #include <memory>
 
-namespace app {
+namespace epoll_server {
 
 class Connection;
 
@@ -57,6 +57,6 @@ private:
 
 using MessagePtr = std::shared_ptr<Message>;
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_MESSAGE_H_
+#endif  // EPOLL_SERVER_MESSAGE_H_

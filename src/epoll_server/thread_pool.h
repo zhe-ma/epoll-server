@@ -1,14 +1,14 @@
-#ifndef APP_THREAD_POOL_H_
-#define APP_THREAD_POOL_H_
+#ifndef EPOLL_SERVER_THREAD_POOL_H_
+#define EPOLL_SERVER_THREAD_POOL_H_
 
 #include <thread>
 #include <vector>
 #include <functional>
 #include <memory>
 
-#include "app/thread_safe_queue.h"
+#include "epoll_server/thread_safe_queue.h"
 
-namespace app {
+namespace epoll_server {
 
 template <class T>
 class ThreadPool {
@@ -64,6 +64,6 @@ private:
   std::function<void(TPtr)> handler_;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_THREAD_POOL_H_
+#endif  // EPOLL_SERVER_THREAD_POOL_H_

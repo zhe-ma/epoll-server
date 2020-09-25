@@ -1,13 +1,13 @@
-#ifndef APP_CONFIG_H_
-#define APP_CONFIG_H_
+#ifndef EPOLL_SERVER_CONFIG_H_
+#define EPOLL_SERVER_CONFIG_H_
 
 #include <string>
 
-#include "app/singleton_base.h"
+#include "epoll_server/singleton_base.h"
 
-#define CONFIG (*app::Config::GetInstance())
+#define CONFIG (*epoll_server::Config::GetInstance())
 
-namespace app {
+namespace epoll_server {
 
 class Config : public SingletonBase<Config>{
 public:
@@ -32,6 +32,6 @@ public:
   std::uint16_t port;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_CONFIG_H_
+#endif  // EPOLL_SERVER_CONFIG_H_

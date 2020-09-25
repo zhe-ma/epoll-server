@@ -1,4 +1,4 @@
-#include "app/connection.h"
+#include "epoll_server/connection.h"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -6,11 +6,11 @@
 #include <arpa/inet.h>
 #include <sys/errno.h>
 
-#include "app/logging.h"
-#include "app/message.h"
-#include "app/utils.h"
+#include "epoll_server/logging.h"
+#include "epoll_server/message.h"
+#include "epoll_server/utils.h"
 
-namespace app {
+namespace epoll_server {
 
 Connection::Connection(int fd, Type type)
     : fd_(fd)
@@ -187,4 +187,4 @@ void Connection::SetWriteEvent(bool enable) {
   }
 }
 
-}  // namespace app
+}  // namespace epoll_server

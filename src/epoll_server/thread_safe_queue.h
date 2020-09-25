@@ -1,12 +1,12 @@
-#ifndef APP_THREAD_SAFE_QUEUE_H_
-#define APP_THREAD_SAFE_QUEUE_H_
+#ifndef EPOLL_SERVER_THREAD_SAFE_QUEUE_H_
+#define EPOLL_SERVER_THREAD_SAFE_QUEUE_H_
 
 #include <condition_variable>
 #include <list>
 #include <memory>
 #include <mutex>
 
-namespace app {
+namespace epoll_server {
 
 template <class T>
 class ThreadSafeQueue {
@@ -40,6 +40,6 @@ private:
   std::condition_variable not_empty_cv_;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_UTAPP_THREAD_SAFE_QUEUE_H_ILS_H_
+#endif  // EPOLL_SERVER_THREAD_SAFE_QUEUE_H_

@@ -1,10 +1,10 @@
-#ifndef APP_UTILS_H_
-#define APP_UTILS_H_
+#ifndef EPOLL_SERVER_UTILS_H_
+#define EPOLL_SERVER_UTILS_H_
 
 #include <cstdint>
 #include <string>
 
-namespace app {
+namespace epoll_server {
 
 namespace sock {
 
@@ -42,6 +42,6 @@ std::string Uint16ToBytes(ByteOrder byte_order, uint16_t num);
 // Return the milliseconds timestamp.
 int64_t GetNowTimestamp();
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_UTILS_H_
+#endif  // EPOLL_SERVER_UTILS_H_

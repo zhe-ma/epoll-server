@@ -32,7 +32,7 @@
     {
       "label": "run",
       "type": "shell",
-      "command": "${workspaceFolder}/build/src/app/epoll_server",
+      "command": "${workspaceFolder}/build/src/app/Server",
       "problemMatcher": []
     },
     {

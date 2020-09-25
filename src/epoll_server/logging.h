@@ -1,13 +1,13 @@
-#ifndef APP_LOGGING_H_
-#define APP_LOGGING_H_
+#ifndef EPOLL_SERVER_LOGGING_H_
+#define EPOLL_SERVER_LOGGING_H_
 
 #include <string>
 
 #include "spdlog/spdlog.h"
 
-#define SPDLOG_TRACK_METHOD app::TrackMethodLog track_method_log(__FUNCTION__)
+#define SPDLOG_TRACK_METHOD epoll_server::TrackMethodLog track_method_log(__FUNCTION__)
 
-namespace app {
+namespace epoll_server {
 
 // Log level: "trace", "debug", "info", "warn", "error", "fatal".
 // Rotate size: Byte.
@@ -29,6 +29,6 @@ private:
   std::string method_;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_LOGGING_H_
+#endif  // EPOLL_SERVER_LOGGING_H_

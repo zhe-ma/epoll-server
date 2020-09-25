@@ -1,10 +1,10 @@
-#ifndef APP_SINGLETON_BASE_H_
-#define APP_SINGLETON_BASE_H_
+#ifndef EPOLL_SERVER_SINGLETON_BASE_H_
+#define EPOLL_SERVER_SINGLETON_BASE_H_
 
 #include <memory>
 #include <mutex>
 
-namespace app {
+namespace epoll_server {
 
 // This is a singleton base class.
 // The necessary steps when create a new singleton class.
@@ -84,6 +84,6 @@ private:
 template <class T>
 std::unique_ptr<T> SingletonBase<T>::s_instance;
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_SINGLETON_BASE_H_
+#endif  // EPOLL_SERVER_SINGLETON_BASE_H_

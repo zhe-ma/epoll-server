@@ -1,6 +1,6 @@
-#include "app/crc32.h"
+#include "epoll_server/crc32.h"
 
-namespace app {
+namespace epoll_server {
 
 static const unsigned int kCrc32Table[] = {
   0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -66,4 +66,4 @@ unsigned int CalcCRC32(const std::string& data_bytes) {
   return crc ^ ~0U;
 }
 
-}  // namespace app
+}  // namespace epoll_server

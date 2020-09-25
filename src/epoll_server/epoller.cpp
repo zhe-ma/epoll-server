@@ -1,10 +1,10 @@
-#include "app/epoller.h"
+#include "epoll_server/epoller.h"
 
 #include <sys/unistd.h>
 
-#include "app/logging.h"
+#include "epoll_server/logging.h"
 
-namespace app {
+namespace epoll_server {
 
 Epoller::Epoller() : fd_(-1) {
 }
@@ -83,4 +83,4 @@ bool Epoller::Modify(int target_fd, uint32_t events, void* ptr) {
   return true;
 }
 
-}  // namespace app
+}  // namespace epoll_server

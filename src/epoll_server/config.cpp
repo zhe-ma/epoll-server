@@ -1,8 +1,8 @@
-#include "app/config.h"
+#include "epoll_server/config.h"
 
-#include "app/json_helper.h"
+#include "epoll_server/json_helper.h"
 
-namespace app {
+namespace epoll_server {
 
 bool Config::Load(const std::string& file_path, std::string* error_msg) {
   Json::Value config;
@@ -26,4 +26,4 @@ bool Config::Load(const std::string& file_path, std::string* error_msg) {
   return true;
 }
 
-}  // namespace app
+}  // namespace epoll_server

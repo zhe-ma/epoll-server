@@ -1,4 +1,4 @@
-#include "app/server.h"
+#include "epoll_server/server.h"
 
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -6,13 +6,13 @@
 #include <sys/eventfd.h>
 #include <sys/errno.h>
 
-#include "app/crc32.h"
-#include "app/logging.h"
-#include "app/utils.h"
-#include "app/connection.h"
-#include "app/message.h"
+#include "epoll_server/crc32.h"
+#include "epoll_server/logging.h"
+#include "epoll_server/utils.h"
+#include "epoll_server/connection.h"
+#include "epoll_server/message.h"
 
-namespace app {
+namespace epoll_server {
 
 // TODO: Configubale
 const size_t MAX_CONNECTION_POLL_SIZE = 1024;
@@ -294,4 +294,4 @@ void Server::WakeUp() {
   }
 }
 
-}  // namespace app
+}  // namespace epoll_server

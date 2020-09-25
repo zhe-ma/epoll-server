@@ -1,12 +1,12 @@
-#ifndef APP_ROUTER_BASE_H_
-#define APP_ROUTER_BASE_H_
+#ifndef EPOLL_SERVER_ROUTER_BASE_H_
+#define EPOLL_SERVER_ROUTER_BASE_H_
 
 #include <string>
 #include <memory>
 
-#include "app/message.h"
+#include "epoll_server/message.h"
 
-namespace app {
+namespace epoll_server {
 
 class RouterBase {
 public:
@@ -18,6 +18,6 @@ public:
 
 using RouterPtr = std::shared_ptr<RouterBase>;
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_ROUTER_BASE_H_
+#endif  // EPOLL_SERVER_ROUTER_BASE_H_

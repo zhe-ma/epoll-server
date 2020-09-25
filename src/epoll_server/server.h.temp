@@ -1,0 +1,21 @@
+#ifndef EPOLL_SERVER_SERVER_H_
+#define EPOLL_SERVER_SERVER_H_
+
+#include "epoll_server/socket.h"
+
+namespace epoll_server {
+
+class Server {
+public:
+  Server() = default;
+  ~Server() = default;
+
+  bool Start();
+
+private:
+  Socket socket_;
+};
+
+}  // namespace epoll_server
+
+#endif  // EPOLL_SERVER_SERVER_H_

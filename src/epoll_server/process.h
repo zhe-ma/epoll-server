@@ -1,9 +1,9 @@
-#ifndef APP_PROCESS_H_
-#define APP_PROCESS_H_
+#ifndef EPOLL_SERVER_PROCESS_H_
+#define EPOLL_SERVER_PROCESS_H_
 
 #include <string>
 
-namespace app {
+namespace epoll_server {
 
 extern char** g_argv;
 extern int g_argc;
@@ -16,6 +16,6 @@ bool SetProcessTitle(const std::string& title);
 // return value < 0  : fork error 
 int CreateDaemonProcess();
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_PROCESS_H_
+#endif  // EPOLL_SERVER_PROCESS_H_

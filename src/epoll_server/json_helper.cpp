@@ -1,10 +1,10 @@
-#include "app/json_helper.h"
+#include "epoll_server/json_helper.h"
 
 #include <fstream>
 #include <memory>
 #include <sstream>
 
-namespace app {
+namespace epoll_server {
 
 void JsonToString(const Json::Value& json, std::string* str) {
   Json::StreamWriterBuilder builder;
@@ -49,4 +49,4 @@ bool SaveJsonToFile(const std::string& file_path, const Json::Value& json) {
   return true;
 }
 
-}  // namespace app
+}  // namespace epoll_server

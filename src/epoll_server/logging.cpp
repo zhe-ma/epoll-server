@@ -1,11 +1,11 @@
-#include "app/logging.h"
+#include "epoll_server/logging.h"
 
 #include <memory>
 
 #include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
-namespace app {
+namespace epoll_server {
 
 static spdlog::level::level_enum GetLogLevel(const std::string& level_name) {
   if (level_name == "trace") {
@@ -54,4 +54,4 @@ void InitLogging(const std::string& file_name, const std::string& level,
   spdlog::set_default_logger(logger);
 }
 
-}  // namespace app
+}  // namespace epoll_server

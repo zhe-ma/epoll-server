@@ -1,11 +1,11 @@
-#ifndef APP_JSON_HELPER_H_
-#define APP_JSON_HELPER_H_
+#ifndef EPOLL_SERVER_JSON_HELPER_H_
+#define EPOLL_SERVER_JSON_HELPER_H_
 
 #include <string>
 
 #include "jsoncpp/json/json.h"
 
-namespace app {
+namespace epoll_server {
 
 void JsonToString(const Json::Value& json, std::string* str);
 
@@ -17,6 +17,6 @@ bool LoadJsonFromFile(const std::string& file_path, Json::Value* json,
 
 bool SaveJsonToFile(const std::string& file_path, const Json::Value& json);
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_JSON_HELPER_H_
+#endif  // EPOLL_SERVER_JSON_HELPER_H_

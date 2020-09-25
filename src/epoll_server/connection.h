@@ -1,14 +1,14 @@
-#ifndef APP_CONNECTION_H_
-#define APP_CONNECTION_H_
+#ifndef EPOLL_SERVER_CONNECTION_H_
+#define EPOLL_SERVER_CONNECTION_H_
 
 #include <string>
 #include <functional>
 
-#include "app/message.h"
+#include "epoll_server/message.h"
 
 struct sockaddr_in;
 
-namespace app {
+namespace epoll_server {
 
 class Connection {
 public:
@@ -105,6 +105,6 @@ private:
   size_t sended_len_;
 };
 
-}  // namespace app
+}  // namespace epoll_server
 
-#endif  // APP_CONNECTION_H_
+#endif  // EPOLL_SERVER_CONNECTION_H_
