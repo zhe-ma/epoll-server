@@ -75,6 +75,9 @@ TODO:
 
 40. 合并SetNonBlocking(fd)) sock::SetClosexc(fd))
 
+41. 设置该Server的连接创建时Hook函数SetOnConnStart(func(IConnection))
+    设置该Server的连接断开时的Hook函数SetOnConnStop(func(IConnection))
+
 ==========================================================================
 DONE:
 

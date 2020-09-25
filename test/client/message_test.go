@@ -1,10 +1,9 @@
 package client
 
 import (
-	"hash/crc32"
+	"fmt"
 	"net"
 	"testing"
-	"time"
 )
 
 // go  test  test/client -run ^TestMessage$ -count=1 -v
@@ -29,12 +28,17 @@ func TestMessage(t *testing.T) {
 	defer client.Close()
 
 	data := []byte("Hi")
-	msg := Message{uint16(len(data)), 2020, crc32.ChecksumIEEE(data), data}
+	msg := NewMessage(2020, data)
 	if _, err = client.Write(msg.Pack()); err != nil {
 		t.Error(err)
 	}
 
-	time.Sleep(time.Second * 10)
+	rsp := Message{}
+	if err = rsp.Unpack(client); err != nil {
+		t.Error(err)
+	}
+
+	fmt.Println(rsp.String())
 }
 
 func TestMessage2(t *testing.T) {
@@ -45,9 +49,9 @@ func TestMessage2(t *testing.T) {
 	defer client.Close()
 
 	data := []byte("Hello")
-	msg := Message{uint16(len(data)), 2020, crc32.ChecksumIEEE(data), data}
+	msg := NewMessage(2020, data)
 	data = []byte("World")
-	msg2 := Message{uint16(len(data)), 2020, crc32.ChecksumIEEE(data), data}
+	msg2 := NewMessage(2020, data)
 	buf := msg.Pack()
 	buf = append(buf, msg2.Pack()...)
 
@@ -55,5 +59,16 @@ func TestMessage2(t *testing.T) {
 		t.Error(err)
 	}
 
-	time.Sleep(time.Second * 10)
+	rsp := Message{}
+	if err = rsp.Unpack(client); err != nil {
+		t.Error(err)
+	}
+
+	fmt.Println(rsp.String())
+
+	if err = rsp.Unpack(client); err != nil {
+		t.Error(err)
+	}
+
+	fmt.Println(rsp.String())
 }
