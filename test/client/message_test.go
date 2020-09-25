@@ -38,7 +38,7 @@ func TestMessage(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Println(rsp.String())
+	fmt.Println(rsp)
 }
 
 func TestMessage2(t *testing.T) {
@@ -64,11 +64,11 @@ func TestMessage2(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Println(rsp.String())
+	fmt.Println(rsp)
 
 	if err = rsp.Unpack(client); err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println(rsp.String())
+	fmt.Println(rsp)
 }

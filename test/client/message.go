@@ -22,7 +22,7 @@ func (msg *Message) GetHeadLen() uint16 {
 	return uint16(len)
 }
 
-func (msg *Message) String() string {
+func (msg Message) String() string {
 	return fmt.Sprintf("Len: %v, Code: %v, Crc32: %v, Data: %v", msg.DataLen, msg.Code, msg.Crc32, string(msg.Data))
 }
 
