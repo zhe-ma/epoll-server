@@ -33,10 +33,9 @@ void Connection::Close() {
     close(fd_);
   }
 
-  timestamp_.store(0, std::memory_order_relaxed);
-
   fd_ = -1;
   type_ = kTypeSocket;
+  timestamp_ = 0;
   epoll_events_ = 0;
   remote_ip_.clear();
   remote_port_ = -1;
@@ -51,12 +50,7 @@ void Connection::SetSendData(std::string&& send_data, size_t sended_len) {
 }
 
 void Connection::UpdateTimestamp() {
-  auto now = GetNowTimestamp();
-  timestamp_.store(now, std::memory_order_relaxed);
-}
-
-int64_t Connection::GetTimestamp() const {
-  return timestamp_.load(std::memory_order_relaxed);
+  timestamp_ = GetNowTimestamp();
 }
 
 int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
@@ -70,7 +64,6 @@ int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
    memset(sock_addr, 0, sock_len);
   }
 
-  // 将listen socket设置为非阻塞，防止该函数阻塞太久。
   int fd = accept(fd_, (struct sockaddr*)sock_addr, &sock_len);
   if (fd != -1) {
     return fd;

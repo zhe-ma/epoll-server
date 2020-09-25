@@ -14,6 +14,8 @@
 
 namespace app {
 
+// The network I/O are in the same thread. The business logic is handled in thread pool.
+
 class Server {
 public:
   explicit Server(unsigned short port);
@@ -29,12 +31,14 @@ private:
 
   bool PollOnce();
 
+  // The accecpt, read and write operations are in the same thread.
   void HandleAccpet(Connection* conn);
   void HandleRead(Connection* conn);
-
-  void HandleRequest(MessagePtr request);
-
+  
   void HandlePendingResponses();
+
+  // Use thread pool to handle requests.
+  void HandleRequest(MessagePtr request);
 
   // Trigger a epoll event and wake up epoll_wait.
   void WakeUp();

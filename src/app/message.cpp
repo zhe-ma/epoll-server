@@ -25,7 +25,7 @@ Message::Message(Connection* conn, uint16_t code_, std::string&& data_) {\
   code = code_;
   crc32 = CalcCRC32(data);
   conn_ = conn;
-  conn_timestamp_ = conn_->GetTimestamp();
+  conn_timestamp_ = conn_->timestamp();
 }
 
 bool Message::Valid() const {
@@ -33,7 +33,7 @@ bool Message::Valid() const {
     return false;
   }
 
-  if (conn_timestamp_ != conn_->GetTimestamp()) {
+  if (IsExpired()) {
     SPDLOG_WARN("Expired message.");
     return false;
   }
@@ -43,28 +43,38 @@ bool Message::Valid() const {
     return false;
   }
 
-  // 只有包头，CRC32值应为0。
+  // The CRC32 value should be 0 if no header.
   if (data_len == 0 && crc32 !=0) {
     SPDLOG_DEBUG("Invaid Request");
     return false;
   }
 
-  if (data_len !=0) {
-    // CRC32校验失败。
-    if (crc32 != CalcCRC32(data)) {
-      SPDLOG_DEBUG("Invaid Request");
-      return false;
-    }
+  if (data_len !=0  && crc32 != CalcCRC32(data)) {
+    SPDLOG_DEBUG("Invaid Request");
+    return false;
   }
 
   return true;
+}
+
+bool Message::IsExpired() const {
+  if (conn_ == nullptr) {
+    return true;
+  }
+
+  // The message is expired because the related conn_ is closed or reused by new connection.
+  if (conn_timestamp_ != conn_->timestamp()) {
+    return true;
+  }
+
+  return false;
 }
 
 void Message::Unpack(Connection* conn, const char header[8], std::string&& data_) {
   assert(conn != nullptr);
 
   conn_ = conn;
-  conn_timestamp_ = conn->GetTimestamp();
+  conn_timestamp_ = conn->timestamp();
 
   data_len = BytesToUint16(kLittleEndian, &header[0]);
   code = BytesToUint16(kLittleEndian, &header[2]);

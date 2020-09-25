@@ -25,6 +25,8 @@ Server::Server(unsigned short port)
 }
 
 bool Server::Start() {
+  SPDLOG_TRACK_METHOD;
+
   if (!epoller_.Create()) {
     return false;
   }
@@ -66,7 +68,6 @@ bool Server::Start() {
     return false;
   }
 
-  // TODO: delete conn.
   for (;;) {
     if (!PollOnce()) {
       return false;
@@ -83,15 +84,13 @@ void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
 }
 
 bool Server::Listen() {
-  SPDLOG_TRACK_METHOD;
-
-  // 打开SO_REUSEADDR选项，防止TIME_WAIT时bind失败的问题.
+  // Enable SO_REUSEADDR option to avoid that TIME_WAIT prevents the server restarting.
   if (!sock::SetReuseAddr(acceptor_fd_)) {
     SPDLOG_ERROR("Failed to set SO_REUSEADDR");
     return false;
   }
 
-  // 设置为非阻塞模式，防止accept时阻塞太久。
+  // Set the acceptor to be non-blocking to avoid calling accept() to block too much time.
   if (!sock::SetNonBlocking(acceptor_fd_)) {
     SPDLOG_ERROR("Faild to set socket to be non-blocking.");
     return false;
@@ -125,20 +124,14 @@ bool Server::PollOnce() {
       continue;
     }
 
-    // 如果epoll_wait拿到多个事件，第一个事件由于业务需要将conn->socket_fd置为-1。
-    // 而第二个事件还是这个连接，那个这个连接就属于过期的事件。
+    // The connection may be closed by preivous event.
     if (conn->fd() == -1) {
       SPDLOG_DEBUG("Expired event.");
       continue;
     }
 
-    int events = event.events;
-    // 如果收到EPOLLERR或者EPOLLRDHUP，socket断掉，则在HanldeRead和HandleWrite中进行处理。
-    if (events & (EPOLLERR | EPOLLRDHUP) ) {
-      events |= EPOLLIN | EPOLLOUT; 
-    }
-
-    if (events & EPOLLIN) {
+    // The socket is disconected if receive EPOLLERR or EPOLLRDHUP.
+    if (event.events & (EPOLLIN | EPOLLERR | EPOLLRDHUP)) {
       if (conn->type() == Connection::kTypeAcceptor) {
         HandleAccpet(conn);
       } else if (conn->type() == Connection::kTypeSocket) {
@@ -146,8 +139,12 @@ bool Server::PollOnce() {
       } else if (conn->type() == Connection::kTypeWakener) {
         conn->HandleWakeUp();
       }
+      continue;
+    }
 
-    } else if (events & EPOLLOUT) {
+    if (event.events & EPOLLOUT) {
+      // The EPOLLOUT event will be triggered constantly if the socket is writable.
+      // So if the data is sened completely, the EPOLLOUT event should be removed from epoll.
       if (conn->HandleWrite()) {
         conn->SetWriteEvent(false);
         epoller_.Modify(conn->fd(), conn->epoll_events(), static_cast<void*>(conn));
@@ -160,6 +157,7 @@ bool Server::PollOnce() {
   return true;
 }
 
+// In I/O thread.
 void Server::HandleAccpet(Connection* conn) {
   if (conn == nullptr) {
     return;
@@ -203,34 +201,65 @@ void Server::HandleAccpet(Connection* conn) {
   if (!epoller_.Add(new_conn->fd(), new_conn->epoll_events(), static_cast<void*>(new_conn))) {
     SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
     connection_pool_.Release(conn);
-    return;
   }
 }
 
+// In I/O thread.
 void Server::HandleRead(Connection* conn) {
-  MessagePtr msg;
-  if (!conn->HandleRead(&msg)) {
+  MessagePtr request;
+  if (!conn->HandleRead(&request)) {
     connection_pool_.Release(conn);
     return;
   }
 
-  if (!msg) {
-    return;
-  }
-  
-  SPDLOG_TRACE("Recv:{},{},{},{}", msg->data_len, msg->code, msg->crc32, msg->data);
-
-  request_thread_pool_.Add(std::move(msg));
-}
-
-void Server::HandleRequest(MessagePtr request) {
   if (!request) {
     return;
   }
 
-  SPDLOG_TRACE("Handle request: {}", request->data);
+  request_thread_pool_.Add(std::move(request));
+}
 
-  if (!request->Valid()) {
+// In I/O thread.
+void Server::HandlePendingResponses() {
+  std::vector<MessagePtr> responses;
+  {
+    std::lock_guard<std::mutex> lock(pending_response_mutex_);
+    responses.swap(pending_responses_);
+  }
+
+  for (auto response : responses) {
+    if (!response) {
+      continue;
+    }
+
+    if (response->IsExpired()) {
+      SPDLOG_DEBUG("Expired reponse.");
+      continue;
+    }
+
+    Connection* conn = response->conn();
+    std::string buf = std::move(response->Pack());
+    size_t sended_size = 0;
+
+    int n = sock::Send(conn->fd(), &buf[0], buf.size(), &sended_size);
+    // Send error.
+    if (n == -1) {
+      SPDLOG_ERROR("Failed to send data.");
+      continue;
+    }
+
+    // System write buffer is full. It should wait the writable event.
+    if (n == 0) {
+      conn->SetSendData(std::move(buf), sended_size);
+      conn->SetWriteEvent(true);
+      epoller_.Modify(conn->fd(), conn->epoll_events(), static_cast<void*>(conn));
+    }
+  }
+}
+
+// Use thread pool to handle requests.
+void Server::HandleRequest(MessagePtr request) {
+  if (!request && !request->Valid()) {
     return;
   }
 
@@ -248,48 +277,13 @@ void Server::HandleRequest(MessagePtr request) {
 
   std::string response_data = router->HandleRequest(request);
   MessagePtr response = std::make_shared<Message>(request->conn(), request->code, std::move(response_data));
-
   {
     std::lock_guard<std::mutex> lock(pending_response_mutex_);
     pending_responses_.push_back(std::move(response));
   }
 
+  // Wake up epoll_wait to handle pending responses.
   WakeUp();
-}
-
-void Server::HandlePendingResponses() {
-  std::vector<MessagePtr> responses;
-  {
-    std::lock_guard<std::mutex> lock(pending_response_mutex_);
-    responses.swap(pending_responses_);
-  }
-
-  for (auto response : responses) {
-    if (!response) {
-      continue;
-    }
-
-    SPDLOG_TRACE("Handle Response: {}", response->data);
-
-    // // TODO: Check expiration.
-
-    Connection* conn = response->conn();
-    if (conn == nullptr) {
-      continue;
-    }
-
-    std::string buf = std::move(response->Pack());
-    size_t sended_size = 0;
-    int n = sock::Send(conn->fd(), &buf[0], buf.size(), &sended_size);
-    if (n == -1) {
-      SPDLOG_ERROR("Failed to send data.");
-    } else if (n == 0) {
-       // System write buffer is full. It should wait the writable event.
-      conn->SetSendData(std::move(buf), sended_size);
-      conn->SetWriteEvent(true);
-      epoller_.Modify(conn->fd(), conn->epoll_events(), static_cast<void*>(conn));
-    }
-  }
 }
 
 void Server::WakeUp() {

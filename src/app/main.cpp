@@ -12,6 +12,7 @@ using namespace app;
 
 class Router : public RouterBase {
   std::string HandleRequest(MessagePtr msg) override {
+    SPDLOG_TRACE("Recv:{},{},{},{}", msg->data_len, msg->code, msg->crc32, msg->data);
     return "Ayou";
   }
 };

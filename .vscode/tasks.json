@@ -34,7 +34,15 @@
       "type": "shell",
       "command": "${workspaceFolder}/build/src/app/epoll_server",
       "problemMatcher": []
+    },
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "go  test  test/client  -count=1 -v",
+      "options": {
+        "cwd": "${workspaceFolder}/test"
+      },
+      "problemMatcher": []
     }
   ]
 }
-

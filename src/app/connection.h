@@ -1,7 +1,6 @@
 #ifndef APP_CONNECTION_H_
 #define APP_CONNECTION_H_
 
-#include <atomic>
 #include <string>
 #include <functional>
 
@@ -46,6 +45,10 @@ public:
     return epoll_events_;
   }
 
+  int64_t timestamp() const {
+    return timestamp_;
+  }
+
   void set_remote_ip(const std::string& remote_ip) {
     remote_ip_ = remote_ip;
   }
@@ -65,8 +68,6 @@ public:
   void SetSendData(std::string&& send_data, size_t sended_len);
 
   void UpdateTimestamp();
-
-  int64_t GetTimestamp() const;
 
   // Return socket fd.
   int HandleAccept(struct sockaddr_in* sock_addr);
@@ -88,7 +89,8 @@ private:
 
   uint32_t epoll_events_;
 
-  std::atomic<int64_t> timestamp_;  // Millsecond.
+  // Every alive connection has a unique timestamp.
+  int64_t timestamp_;  // Millsecond.
 
   std::string remote_ip_;
   unsigned short remote_port_;

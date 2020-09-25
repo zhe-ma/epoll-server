@@ -14,9 +14,9 @@ class Connection;
 
 class Message {
 public:
-  uint16_t data_len;  // 数据长度。
-  uint16_t code;  // 区别不同的命令。
-  uint32_t crc32;  // 数据校验。
+  uint16_t data_len;  // Data length.
+  uint16_t code;  // Distinguish commands.
+  uint32_t crc32;  // Data check number.
 
   std::string data;
 
@@ -29,6 +29,8 @@ public:
   Message(Connection* conn, uint16_t code_, std::string&& data_);
 
   bool Valid() const;
+
+  bool IsExpired() const;
 
   void Unpack(Connection* conn, const char header[8], std::string&& data_);
 
