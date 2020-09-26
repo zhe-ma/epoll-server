@@ -81,6 +81,15 @@ TODO:
 42. 简化config和loging初始化的集成。  if (!CONFIG.Load("conf/config.json", &error_msg)) {
    InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
 
+43. 多进程，哪些变量在主进程初始化，哪些进程在子进程初始化。
+
+44. 延迟回收connection有必要吗
+
+45. 停止时清空response队列。
+
+46. 连接数量控制。
+
+47. 心跳包
 
 ==========================================================================
 DONE:
