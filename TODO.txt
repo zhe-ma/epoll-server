@@ -4,15 +4,7 @@ TODO:
 0. 文档。
 1. 父进程可以重新创建新的子进程。
 2. 测试SignalHandler。
-3. 测试
 4. InitSignal和CreateDaemon的调用顺序
-6. TODO: delete conn.
-7. TODO: configurable.
-8. configurable size_t MAX_EPOLL_EVENTS,MAX_CONNECTION_POLL_SIZE;
-
-12. Connection依赖Server, Server依赖ConnectionPool,ConnectionPoll依赖Connection，解耦？
-13. Delete iostream output
-14. console log configurable
 
 15. Bug总结
  std::uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
@@ -25,39 +17,11 @@ TODO:
 
 19. 第五章笔记。
 
-20. accept(socket_fd_, (struct sockaddr*)&sock_addr, &sock_len);第二个参数能否为空。
-
-21. 测试msg(std::move(msg_))是否将msg的值move了
-
 22. thread safe queue可以使用circleQueue。
-
-23. thread pool size configurable.
 
 24. error时log要有函数参数和函数名。
 
-25. server::HanleRequest，TODO: 过期包判断。
-
 26. 阅读muduo实现
-
-26. server实现单独放一个文件夹
-
-27. test receive data.
-
-28. refine Server::Start.
-
-29. ::close(epollfd_); close(eventfd_)
-
-30. 学习zinx 连接管理。
-
-31. Refine pollonce.
-
-32. listen_socket rename acceptor.
-
-33. 将listen socket 和 eventfd不要从conenctionpool创建。
-
-34. handlerequest时不要处理超时，写的时候处理可以减少原子的使用。
-
-35. epoll 操作epoller.
 
 36. 整理笔记时，将注释放到笔记。
   // EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。
@@ -67,29 +31,26 @@ TODO:
   // EPOLLRDHUP: 读关闭，2.6.17之后版本内核，对端连接断开(close()，kill，ctrl+c)触发的epoll事件会包含EPOLLIN|EPOLLRDHUP。
   // EPOLLHUP: 读写都关闭
   // EPOLLET: 将EPOLL设为边缘触发(Edge Triggered)模式。
-37. 注释改为英文。
+  
+  // EAGAIN是提示再试一次。这个错误经常出现在当应用程序进行一些非阻塞操作。
+  // 如果read操作而没有数据可读，此时程序不会阻塞起来等待数据准备就绪返回，
+  // read函数会返回一个错误EAGAIN，提示现在没有数据可读请稍后再试。
 
 38. //删除红黑树中节点，目前没这个需求【socket关闭这项会自动从红黑树移除】
-
-39. zinx 一个router有几个函数操作
-
-40. 合并SetNonBlocking(fd)) sock::SetClosexc(fd))
 
 41. 设置该Server的连接创建时Hook函数SetOnConnStart(func(IConnection))
     设置该Server的连接断开时的Hook函数SetOnConnStop(func(IConnection))
 
-42. 简化config和loging初始化的集成。  if (!CONFIG.Load("conf/config.json", &error_msg)) {
-   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
 
 43. 多进程，哪些变量在主进程初始化，哪些进程在子进程初始化。
 
 44. 延迟回收connection有必要吗
 
-45. 停止时清空response队列。
+45. 没有提供stop函数。停止时清空response队列。
 
 46. 连接数量控制。
 
-47. 心跳包
+47. 心跳包 定时器。
 
 ==========================================================================
 DONE:
@@ -109,3 +70,52 @@ DONE:
 10. Epoller 封装epoll动作?
 
 5. 为什么要设置为非阻塞模式？？？？？？
+
+25. server::HanleRequest，TODO: 过期包判断。
+
+39. zinx 一个router有几个函数操作
+
+40. 合并SetNonBlocking(fd)) sock::SetClosexc(fd))
+
+8. configurable size_t MAX_EPOLL_EVENTS,MAX_CONNECTION_POLL_SIZE;
+
+23. thread pool size configurable.
+
+30. 学习zinx 连接管理。
+
+31. Refine pollonce.
+
+26. server实现单独放一个文件夹
+
+29. ::close(epollfd_); close(eventfd_)
+
+27. test receive data.
+
+28. refine Server::Start.
+
+20. accept(socket_fd_, (struct sockaddr*)&sock_addr, &sock_len);第二个参数能否为空。
+
+21. 测试msg(std::move(msg_))是否将msg的值move了
+
+6. TODO: delete conn.
+
+7. TODO: configurable.
+
+35. epoll 操作epoller.
+
+32. listen_socket rename acceptor.
+
+33. 将listen socket 和 eventfd不要从conenctionpool创建。
+
+34. handlerequest时不要处理超时，写的时候处理可以减少原子的使用。
+
+12. Connection依赖Server, Server依赖ConnectionPool,ConnectionPoll依赖Connection，解耦？
+
+13. Delete iostream output
+
+14. console log configurable
+
+37. 注释改为英文。
+
+42. 简化config和loging初始化的集成。  if (!CONFIG.Load("conf/config.json", &error_msg)) {
+   InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,

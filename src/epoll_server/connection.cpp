@@ -9,6 +9,7 @@
 #include "epoll_server/logging.h"
 #include "epoll_server/message.h"
 #include "epoll_server/utils.h"
+#include "epoll_server/config.h"
 
 namespace epoll_server {
 
@@ -69,9 +70,7 @@ int Connection::HandleAccept(struct sockaddr_in* sock_addr) {
     return fd;
   }
 
-  // EAGAIN是提示再试一次。这个错误经常出现在当应用程序进行一些非阻塞操作。
-  // 如果read操作而没有数据可读，此时程序不会阻塞起来等待数据准备就绪返回，
-  // read函数会返回一个错误EAGAIN，提示现在没有数据可读请稍后再试。
+  // EAGAIN: No data available right now and try again later.
   int err = errno;
   if (err != EAGAIN && err != EINTR) {
     SPDLOG_WARN("Failed to accept socket. Error: {}-{}.", err, strerror(err));
@@ -96,17 +95,17 @@ bool Connection::HandleRead(MessagePtr* msg) {
     }
 
     recv_header_len_ += n;
-    // Header没接收收完整则返回，继续接收数据。
+    // Header is received partly and continue to read data.
     if (recv_header_len_ != Message::kHeaderLen) {
       return true;
     }
 
-    // Header接收完整，计算出数据长度。
+    // Header is received completely and calculate the data length.
     std::uint16_t data_len = BytesToUint16(kLittleEndian, &recv_header_[0]);
-    // 数据长度大于最大包数据长度，认为是恶意包，丢弃该数据，重新接收数据。
-    if (data_len > 3000) {  // TODO: configuable.
+    // Data length is is larger than the maximum packet length. The connection is considered as malicious.
+    if (data_len > CONFIG.max_data_length) {
       recv_header_len_ = 0;
-      return true;
+      return false;
     }
 
     recv_data_.resize(data_len);
@@ -122,12 +121,12 @@ bool Connection::HandleRead(MessagePtr* msg) {
   }
 
   recv_data_len_ += n;
-  // 数据接收不完整则返回，继续接收数据。
+  // Body is received completely and calculate the data length.
   if (recv_data_len_ != recv_data_.size()) {
     return true;
   }
 
-  // 数据接收完整返回Message。
+  // Body is received completely and unpack to message.
   if (msg != nullptr) {
     msg->reset(new Message);
     (*msg)->Unpack(this, &recv_header_[0], std::move(recv_data_));

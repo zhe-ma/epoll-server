@@ -23,20 +23,8 @@ class Router : public RouterBase {
 // netstat -anp | grep -E 'State|9000'
 
 int main(int argc, char* const*argv) {
-  // Load configuration.
-  std::string error_msg;
-  if (!CONFIG.Load("conf/config.json", &error_msg)) {
-    SPDLOG_CRITICAL("Failed to load config file. Error: {}.", error_msg);
-    return -1;
-  }
-
-  // TODO: console log configurable
-  // Init logging.
-  InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
-              CONFIG.log_rotate_count, "trace");
-  SPDLOG_DEBUG("==========================================================");
-
-  Server server(9005);
+  Server server;
+  server.Init();
   server.AddRouter(2020, RouterPtr(new Router));
   server.Start();
 

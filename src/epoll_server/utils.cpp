@@ -38,15 +38,14 @@ bool Bind(int fd, unsigned short port) {
   struct sockaddr_in sock_addr;
   memset(&sock_addr, 0, sizeof(sock_addr));
 
-  // AF_INET: IPV4协议族.
+  // AF_INET: IPV4 protocol family.
   sock_addr.sin_family = AF_INET;
-  // htonl: 将主机数转换成无符号长整型的网络字节顺序.
-  // INADDR_ANY: 表示一个服务器上所有的网卡的所有个本地IP地址.
+  // htonl: Converts the unsigned integer hostlong from host byte order to network byte order.
+  // INADDR_ANY: 0.0.0.0. All local IPV4 address.
   sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  // htons: 将主机数转换成无符号短整型的网络字节顺序.
+  // htons: Converts the unsigned short integer hostshort from host byte order to network byte order.
   sock_addr.sin_port = htons(port);
 
-  // 绑定地址.
   int ret = bind(fd, (const struct sockaddr*)&sock_addr, sizeof(sock_addr));
   if (ret == -1) {
     return false;
@@ -69,7 +68,7 @@ bool SetReuseAddr(int fd) {
 int Recv(int fd, char* buf, size_t buf_len) {
   ssize_t n = recv(fd, buf, buf_len, 0);
 
-  // 对端的socket已正常关闭。
+  // The peer socket closed.
   if (n == 0) {
     SPDLOG_TRACE("Remote socket close.");
     return -1;
@@ -79,7 +78,7 @@ int Recv(int fd, char* buf, size_t buf_len) {
     return n;
   }
 
-  // EAGAIN这个操作可能等下重试后可用。它的另一个名字叫做EWOULDAGAIN。
+  // EAGAIN = EWOULDAGAIN. No data available right now and try again later.
   int err = errno;
   if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
     return 0;
@@ -105,7 +104,7 @@ int Send(int fd, const char* buf, size_t buf_len, size_t* sended_size) {
       continue;
     }
 
-    // 发送缓冲区满了，需要等待可写事件才能继续往发送缓冲区里写数据。
+    // System write buffer is full. It should wait the writable event.
     if (n == -1 && (err == EAGAIN || err == EWOULDBLOCK)) {
       return 0;
     }

@@ -1,6 +1,7 @@
 {
   "log" : {
-    "level" : "trace",
+    "fileLevel" : "trace",
+    "consoleLevel": "trace",
     "filename" : "log/epoll_server.log",
     "rotateFileSize" : 5242880,
     "rotateFileCount" : 10
@@ -12,6 +13,9 @@
   },
 
   "socket" : {
-    "port": 9000
+    "port" : 9005,
+    "connectionPoolSize" : 20000,
+    "threadPoolSize" : 100,
+    "maxDataLength" : 3000
   }
 }

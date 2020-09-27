@@ -18,9 +18,11 @@ namespace epoll_server {
 
 class Server {
 public:
-  explicit Server(unsigned short port);
+  Server();
 
   ~Server() = default;
+
+  void Init(const std::string& config_path = "conf/config.json");
 
   bool Start();
 
@@ -44,8 +46,6 @@ private:
   void WakeUp();
 
 private:
-  unsigned short port_;
-
   int acceptor_fd_;
   std::unique_ptr<Connection> acceptor_connection_;
 
@@ -54,7 +54,7 @@ private:
 
   Epoller epoller_;
 
-  ConnectionPool connection_pool_;
+  std::unique_ptr<ConnectionPool> connection_pool_;
 
   ThreadPool<Message> request_thread_pool_;
 

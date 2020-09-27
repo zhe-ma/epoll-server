@@ -17,7 +17,7 @@ Message::Message()
     , crc32(0) {
 }
 
-Message::Message(Connection* conn, uint16_t code_, std::string&& data_) {\
+Message::Message(Connection* conn, uint16_t code_, std::string&& data_) {
   assert(conn != nullptr);
 
   data = std::move(data_);

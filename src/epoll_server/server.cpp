@@ -7,6 +7,7 @@
 #include <sys/errno.h>
 
 #include "epoll_server/crc32.h"
+#include "epoll_server/config.h"
 #include "epoll_server/logging.h"
 #include "epoll_server/utils.h"
 #include "epoll_server/connection.h"
@@ -14,14 +15,19 @@
 
 namespace epoll_server {
 
-// TODO: Configubale
-const size_t MAX_CONNECTION_POLL_SIZE = 1024;
+Server::Server()
+    : acceptor_fd_(-1)
+    , wakener_fd_(-1) {
+}
 
-Server::Server(unsigned short port)
-    : port_(port)
-    , acceptor_fd_(-1)
-    , wakener_fd_(-1)
-    , connection_pool_(MAX_CONNECTION_POLL_SIZE) {
+void Server::Init(const std::string& config_path) {
+  CONFIG.Load(config_path);
+
+  InitLogging(CONFIG.log_filename, CONFIG.log_file_level, CONFIG.log_rotate_size,
+              CONFIG.log_rotate_count, CONFIG.log_console_level);
+  SPDLOG_DEBUG("==========================================================");
+
+  connection_pool_.reset(new ConnectionPool(CONFIG.connection_pool_size));
 }
 
 bool Server::Start() {
@@ -59,8 +65,7 @@ bool Server::Start() {
     return false;
   }
 
-  // TODO: configurable.
-  request_thread_pool_.Start(4, [this](MessagePtr msg) {
+  request_thread_pool_.Start(CONFIG.thread_pool_size, [this](MessagePtr msg) {
     HandleRequest(msg);
   });
 
@@ -96,8 +101,8 @@ bool Server::Listen() {
     return false;
   }
 
-  if (!sock::Bind(acceptor_fd_, port_)) {
-    SPDLOG_ERROR("Failed to bind port: {}.", port_);
+  if (!sock::Bind(acceptor_fd_, CONFIG.port)) {
+    SPDLOG_ERROR("Failed to bind port: {}.", CONFIG.port);
     return false;
   }
 
@@ -187,7 +192,7 @@ void Server::HandleAccpet(Connection* conn) {
     return;
   }
 
-  Connection* new_conn = connection_pool_.Get();
+  Connection* new_conn = connection_pool_->Get();
   if (new_conn == nullptr) {
     SPDLOG_WARN("Connection pool is empty. Remote addr: {}:{}.", remote_ip, remote_port);
     return;
@@ -200,7 +205,7 @@ void Server::HandleAccpet(Connection* conn) {
 
   if (!epoller_.Add(new_conn->fd(), new_conn->epoll_events(), static_cast<void*>(new_conn))) {
     SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
-    connection_pool_.Release(conn);
+    connection_pool_->Release(conn);
   }
 }
 
@@ -208,7 +213,7 @@ void Server::HandleAccpet(Connection* conn) {
 void Server::HandleRead(Connection* conn) {
   MessagePtr request;
   if (!conn->HandleRead(&request)) {
-    connection_pool_.Release(conn);
+    connection_pool_->Release(conn);
     return;
   }
 
