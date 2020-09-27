@@ -25,6 +25,15 @@ class Router : public RouterBase {
 int main(int argc, char* const*argv) {
   Server server;
   server.Init();
+
+  server.set_on_connected([](Connection* conn) {
+    SPDLOG_DEBUG("OnConnection: {} {}", conn->remote_ip(), conn->remote_port());
+  });
+
+  server.set_on_disconnected([](Connection* conn) {
+    SPDLOG_DEBUG("OnDisconnection: {} {}", conn->remote_ip(), conn->remote_port());
+  });
+
   server.AddRouter(2020, RouterPtr(new Router));
   server.Start();
 

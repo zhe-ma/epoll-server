@@ -70,7 +70,6 @@ int Recv(int fd, char* buf, size_t buf_len) {
 
   // The peer socket closed.
   if (n == 0) {
-    SPDLOG_TRACE("Remote socket close.");
     return -1;
   }
 

@@ -178,8 +178,6 @@ void Server::HandleAccpet(Connection* conn) {
   inet_ntop(AF_INET,&sock_addr.sin_addr, remote_ip, sizeof(remote_ip));
   unsigned short remote_port = ntohs(sock_addr.sin_port);
 
-  SPDLOG_TRACE("Accept socket. Remote addr: {}:{}.", remote_ip, remote_port);
-
   if (!sock::SetNonBlocking(fd)) {
     SPDLOG_WARN("Failed to SetNonBlocking. Remote addr: {}:{}.", remote_ip, remote_port);
     close(fd);
@@ -206,6 +204,11 @@ void Server::HandleAccpet(Connection* conn) {
   if (!epoller_.Add(new_conn->fd(), new_conn->epoll_events(), static_cast<void*>(new_conn))) {
     SPDLOG_ERROR("Failed to update epoll event. Remote addr: {}:{}.", remote_ip, remote_port);
     connection_pool_->Release(conn);
+    return;
+  }
+
+  if (on_connected_) {
+    on_connected_(new_conn);
   }
 }
 
@@ -213,6 +216,10 @@ void Server::HandleAccpet(Connection* conn) {
 void Server::HandleRead(Connection* conn) {
   MessagePtr request;
   if (!conn->HandleRead(&request)) {
+    if (on_disconnected_) {
+      on_disconnected_(conn);
+    }
+
     connection_pool_->Release(conn);
     return;
   }

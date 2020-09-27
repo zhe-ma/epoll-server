@@ -38,13 +38,7 @@ TODO:
 
 38. //删除红黑树中节点，目前没这个需求【socket关闭这项会自动从红黑树移除】
 
-41. 设置该Server的连接创建时Hook函数SetOnConnStart(func(IConnection))
-    设置该Server的连接断开时的Hook函数SetOnConnStop(func(IConnection))
-
-
 43. 多进程，哪些变量在主进程初始化，哪些进程在子进程初始化。
-
-44. 延迟回收connection有必要吗
 
 45. 没有提供stop函数。停止时清空response队列。
 
@@ -119,3 +113,8 @@ DONE:
 
 42. 简化config和loging初始化的集成。  if (!CONFIG.Load("conf/config.json", &error_msg)) {
    InitLogging(CONFIG.log_filename, CONFIG.log_level, CONFIG.log_rotate_size,
+
+41. 设置该Server的连接创建时Hook函数SetOnConnStart(func(IConnection))
+    设置该Server的连接断开时的Hook函数SetOnConnStop(func(IConnection))
+
+44. 延迟回收connection有必要吗

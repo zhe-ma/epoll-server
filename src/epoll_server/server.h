@@ -28,6 +28,14 @@ public:
 
   void AddRouter(uint16_t msg_code, RouterPtr router);
 
+  void set_on_connected(const std::function<void(Connection*)>& on_connected) {
+    on_connected_ = on_connected;
+  }
+
+  void set_on_disconnected(const std::function<void(Connection*)>& on_disconnected) {
+    on_disconnected_ = on_disconnected;
+  }
+
 private:
   bool Listen();
 
@@ -63,6 +71,9 @@ private:
 
   // The key is Message Code.
   std::unordered_map<uint16_t, RouterPtr> routers_;
+
+  std::function<void(Connection*)> on_connected_;
+  std::function<void(Connection*)> on_disconnected_;
 };
 
 }  // namespace epoll_server
