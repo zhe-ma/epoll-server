@@ -14,8 +14,6 @@
 #include <unordered_map>
 #include <thread>
 
-#include <sys/time.h>
-#include <sys/select.h>
 
 int64_t GetNowTimestamp() {
   using namespace std::chrono;
@@ -77,12 +75,12 @@ public:
     return current_index_;
   }
 
-  void set_less_time_wheel(TimeWheel* less_time_wheel) {
-    less_time_wheel_ = less_time_wheel;
+  void set_less_level_tw(TimeWheel* less_level_tw) {
+    less_level_tw_ = less_level_tw;
   }
 
-  void set_greater_time_wheel(TimeWheel* greater_time_wheel) {
-    greater_time_wheel_ = greater_time_wheel;
+  void set_greater_level_tw(TimeWheel* greater_level_tw) {
+    greater_level_tw_ = greater_level_tw_;
   }
 
   void AddTimer(TimerPtr timer) {
@@ -90,8 +88,7 @@ public:
       return;
     }
 
-    int64_t now = GetNowTimestamp();
-    int64_t diff = timer->when_ms() - now;
+    int64_t diff = timer->when_ms() - GetNowTimestamp();
 
     if (diff >= scale_unit_ms_) {
       size_t n = (current_index_ + diff / scale_unit_ms_) % scales_;
@@ -99,12 +96,12 @@ public:
       return;
     }
 
-    if (less_time_wheel_ == nullptr) {
+    if (less_level_tw_ == nullptr) {
       slots_[current_index_].push_back(timer);
       return;
     }
 
-    less_time_wheel_->AddTimer(timer);
+    less_level_tw_->AddTimer(timer);
   }
 
   void Increase() {
@@ -114,9 +111,9 @@ public:
     }
 
     current_index_ = current_index_ % scales_;
-    if (greater_time_wheel_ != nullptr) {
-      greater_time_wheel_->Increase();
-      std::list<TimerPtr> slot = std::move(greater_time_wheel_->GetAndClearCurrentSlot());
+    if (greater_level_tw_ != nullptr) {
+      greater_level_tw_->Increase();
+      std::list<TimerPtr> slot = std::move(greater_level_tw_->GetAndClearCurrentSlot());
       for (TimerPtr timer : slot) {
         AddTimer(timer);
       }
@@ -144,8 +141,8 @@ private:
 
   std::vector<std::list<TimerPtr>> slots_;
 
-  TimeWheel* less_time_wheel_;  // Less scale unit.
-  TimeWheel* greater_time_wheel_;  // Greater scale unit.
+  TimeWheel* less_level_tw_;  // Less scale unit.
+  TimeWheel* greater_level_tw_;  // Greater scale unit.
 };
 
 TimeWheel::TimeWheel(uint32_t scales, uint32_t scale_unit_ms)
@@ -153,15 +150,15 @@ TimeWheel::TimeWheel(uint32_t scales, uint32_t scale_unit_ms)
     , scales_(scales)
     , scale_unit_ms_(scale_unit_ms)
     , slots_(scales)
-    , greater_time_wheel_(nullptr)
-    , less_time_wheel_(nullptr) {
+    , greater_level_tw_(nullptr)
+    , less_level_tw_(nullptr) {
 }
 
 static uint32_t s_inc_id = 1;
 
 class TimeWheelScheduler {
 public:
-  TimeWheelScheduler();
+  TimeWheelScheduler(uint32_t timer_step_ms = 50);
 
   // Return timer id. Return 0 if the timer creation fails.
   uint32_t RunAt(int64_t when_ms, const TimerTask& handler);
@@ -178,63 +175,43 @@ private:
 private:
   std::mutex mutex_;
 
-  TimeWheel time_wheel1_;  // Level one time wheel. The least scale unit.
-  TimeWheel time_wheel2_;
-  TimeWheel time_wheel3_;
-  TimeWheel time_wheel4_;
-  TimeWheel time_wheel5_;  // Level five time wheel. The greatest scale unit.
+  uint32_t timer_step_ms_;
+
+  TimeWheel millisecond_tw_;  // Level one time wheel. The least scale unit.
+  TimeWheel second_tw_;
+  TimeWheel minute_tw_;
+  TimeWheel hour_tw_;  // Level four time wheel. The greatest scale unit.
 };
 
 
-static const size_t kTimeWheel1Scales = 256;
-static const size_t kOtherTimeWheelScales = 64;
+// TODO: Timer_wheel, use level time 1 to add timer. 误差也是timer_step_ms
+TimeWheelScheduler::TimeWheelScheduler(uint32_t timer_step_ms)
+    : timer_step_ms_(timer_step_ms)
+    , millisecond_tw_(1000 / timer_step_ms, timer_step_ms)
+    , second_tw_(60, 1000)
+    , minute_tw_(60, 60 * 1000)
+    , hour_tw_(24, 60 * 60 * 1000) {
 
-//(2^8 * 2^6 * 2^6 * 2^6 *2^6)=2^32
+  hour_tw_.set_less_level_tw(&minute_tw_);
 
-// TODO: Timer_wheel, use level time 1 to add timer.
-TimeWheelScheduler::TimeWheelScheduler()
-    : time_wheel1_(kTimeWheel1Scales, 1)
-    , time_wheel2_(kOtherTimeWheelScales, kTimeWheel1Scales * time_wheel1_.scale_unit_ms())
-    , time_wheel3_(kOtherTimeWheelScales, kOtherTimeWheelScales * time_wheel2_.scale_unit_ms())
-    , time_wheel4_(kOtherTimeWheelScales, kOtherTimeWheelScales * time_wheel3_.scale_unit_ms())
-    , time_wheel5_(kOtherTimeWheelScales, kOtherTimeWheelScales * time_wheel4_.scale_unit_ms()) {
+  minute_tw_.set_less_level_tw(&second_tw_);
+  minute_tw_.set_greater_level_tw(&hour_tw_);
 
-  time_wheel5_.set_less_time_wheel(&time_wheel4_);
+  second_tw_.set_less_level_tw(&millisecond_tw_);
+  second_tw_.set_greater_level_tw(&minute_tw_);
 
-  time_wheel4_.set_less_time_wheel(&time_wheel3_);
-  time_wheel4_.set_greater_time_wheel(&time_wheel5_);
-
-  time_wheel3_.set_less_time_wheel(&time_wheel2_);
-  time_wheel3_.set_greater_time_wheel(&time_wheel4_);
-
-  time_wheel2_.set_less_time_wheel(&time_wheel1_);
-  time_wheel2_.set_greater_time_wheel(&time_wheel3_);
-
-  time_wheel1_.set_greater_time_wheel(&time_wheel2_);
-}
-
-/*seconds: the seconds; mseconds: the micro seconds*/
-void setTimer(int seconds, int mseconds) {
- struct timeval temp;
-
- temp.tv_sec = seconds;
- temp.tv_usec = mseconds;
-
- select(0, NULL, NULL, NULL, &temp);
-
- return;
+  millisecond_tw_.set_greater_level_tw(&second_tw_);
 }
 
 // TODO: how to exit.
 void TimeWheelScheduler::Run() {
   int i = 0;
   while (true) {
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    setTimer(0,1000);
-    //std::lock_guard<std::mutex> lock(mutex_);
-    time_wheel1_.Increase();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::lock_guard<std::mutex> lock(mutex_);
+    millisecond_tw_.Increase();
     ++i;
-    auto c = time_wheel1_.GetAndClearCurrentSlot();
+    auto c = millisecond_tw_.GetAndClearCurrentSlot();
     for (auto t : c) {
       t->Run();
       std::cout << i << std::endl;
@@ -249,7 +226,7 @@ uint32_t TimeWheelScheduler::RunAt(int64_t when_ms, const TimerTask& handler) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   ++s_inc_id;
-  time_wheel5_.AddTimer(std::make_shared<Timer>(s_inc_id, when_ms, 0, handler));
+  day_tw_.AddTimer(std::make_shared<Timer>(s_inc_id, when_ms, 0, handler));
 
   return s_inc_id;
 }
@@ -263,7 +240,7 @@ uint32_t TimeWheelScheduler::RunEvery(uint32_t interval_ms, const TimerTask& han
   std::lock_guard<std::mutex> lock(mutex_);
 
   ++s_inc_id;
-  time_wheel5_.AddTimer(std::make_shared<Timer>(s_inc_id, GetNowTimestamp(), interval_ms, handler));
+  day_tw_.AddTimer(std::make_shared<Timer>(s_inc_id, GetNowTimestamp(), interval_ms, handler));
 
   return s_inc_id;
 }

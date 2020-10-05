@@ -46,14 +46,6 @@ TODO:
 
 47. 心跳包 ： muduo idleconnection. https://blog.csdn.net/Solstice/article/details/6395098
 
-51. 多任务定时器，timequeue or time wheel。https://cloud.tencent.com/developer/article/1361827
-    https://www.ibm.com/developerworks/cn/linux/l-cn-timers/index.html
-    https://github.com/slimccq/timer-benchmarks
-  https://blog.csdn.net/HELPLEE601276804/article/details/36717979
-  https://blog.csdn.net/sinat_35261315/article/details/78324227
-  https://github.com/rpachon/wheel-timer-cpp
-  https://github.com/gaover/timeWheels/blob/master/TimeWheels/TimeWheels.hpp
-
  * 在自己所属线程调用addTimerInLoop函数 
    * 用户只能通过初始创建的EventLoop调用addTimer，为什么还会考虑线程问题 why?
    * 这个线程和TcpServer的线程应该是同一个
@@ -71,6 +63,8 @@ TODO:
         //该用户收消息太慢【或者干脆不收消息】，累积的该用户的发送队列中有的数据条目数过大，认为是恶意用户，直接切断
 
 50. server property.
+
+52. core dump怎么调试。
 
 ==========================================================================
 DONE:
@@ -144,3 +138,13 @@ DONE:
     设置该Server的连接断开时的Hook函数SetOnConnStop(func(IConnection))
 
 44. 延迟回收connection有必要吗
+
+51. timeWheel的中文注释，博客,UT.readme
+
+51. 多任务定时器，timequeue or time wheel。https://cloud.tencent.com/developer/article/1361827
+    https://www.ibm.com/developerworks/cn/linux/l-cn-timers/index.html
+    https://github.com/slimccq/timer-benchmarks
+  https://blog.csdn.net/HELPLEE601276804/article/details/36717979
+  https://blog.csdn.net/sinat_35261315/article/details/78324227
+  https://github.com/rpachon/wheel-timer-cpp
+  https://github.com/gaover/timeWheels/blob/master/TimeWheels/TimeWheels.hpp

@@ -17,7 +17,8 @@ namespace epoll_server {
 
 Server::Server()
     : acceptor_fd_(-1)
-    , wakener_fd_(-1) {
+    , wakener_fd_(-1)
+    , time_wheel_scheduler_(50) {
 }
 
 void Server::Init(const std::string& config_path) {
@@ -28,6 +29,8 @@ void Server::Init(const std::string& config_path) {
   SPDLOG_DEBUG("==========================================================");
 
   connection_pool_.reset(new ConnectionPool(CONFIG.connection_pool_size));
+
+  InitTimeWheelScheduler();
 }
 
 bool Server::Start() {
@@ -73,6 +76,10 @@ bool Server::Start() {
     return false;
   }
 
+  time_wheel_scheduler_.Start([this](TimerPtr timer) {
+    HandleTimeWheelScheduler(timer);
+  });
+
   for (;;) {
     if (!PollOnce()) {
       return false;
@@ -80,12 +87,29 @@ bool Server::Start() {
   }
 
   request_thread_pool_.StopAndWait();
+  time_wheel_scheduler_.Stop();
 
   return true;
 }
 
 void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
   routers_[msg_code] = router;
+}
+
+uint32_t Server::CreateTimerAt(int64_t when_ms, const TimerTask& task) {
+  return time_wheel_scheduler_.CreateTimerAt(when_ms, task);
+}
+
+uint32_t Server::CreateTimerAfter(int64_t delay_ms, const TimerTask& task) {
+  return time_wheel_scheduler_.CreateTimerAfter(delay_ms, task);
+}
+
+uint32_t Server::CreateTimerEvery(int64_t interval_ms, const TimerTask& task) {
+  return time_wheel_scheduler_.CreateTimerEvery(interval_ms, task);
+}
+
+void Server::CancelTimer(uint32_t timer_id) {
+  time_wheel_scheduler_.CancelTimer(timer_id);
 }
 
 bool Server::Listen() {
@@ -158,6 +182,7 @@ bool Server::PollOnce() {
   }
 
   HandlePendingResponses();
+  HandlePendingTimers();
 
   return true;
 }
@@ -269,6 +294,19 @@ void Server::HandlePendingResponses() {
   }
 }
 
+// In I/O thread.
+void Server::HandlePendingTimers() {
+  std::vector<TimerPtr> timers;
+  {
+    std::lock_guard<std::mutex> lock(pending_timer_mutex_);
+    timers.swap(pending_timers_);
+  }
+
+  for (TimerPtr timer : timers) {
+    timer->Run();
+  }
+}
+
 // Use thread pool to handle requests.
 void Server::HandleRequest(MessagePtr request) {
   if (!request && !request->Valid()) {
@@ -298,12 +336,34 @@ void Server::HandleRequest(MessagePtr request) {
   WakeUp();
 }
 
+void Server::HandleTimeWheelScheduler(TimerPtr timer) {
+  {
+    std::lock_guard<std::mutex> lock(pending_timer_mutex_);
+    pending_timers_.push_back(timer);
+  }
+
+  // Wake up epoll_wait to handle pending timers.
+  WakeUp();
+}
+
 void Server::WakeUp() {
   uint64_t one = 1;
   ssize_t n = write(wakener_fd_, &one, sizeof(one));
   if (n != sizeof(one)) {
     SPDLOG_ERROR("Failed to wakeup.");
   }
+}
+
+void Server::InitTimeWheelScheduler() {
+  // Hour time wheel. 24 scales, 1 scale = 60 * 60 * 1000 ms.
+  time_wheel_scheduler_.AppendTimeWheel(24, 60 * 60 * 1000, "HourTimeWheel");
+  // Minute time wheel. 60 scales, 1 scale = 60 * 1000 ms.
+  time_wheel_scheduler_.AppendTimeWheel(60, 60 * 1000, "MinuteTimeWheel");
+  // Second time wheel. 60 scales, 1 scale = 1000 ms.
+  time_wheel_scheduler_.AppendTimeWheel(60, 1000, "SecondTimeWheel");
+  // Millisecond time wheel. 1000/timer_step_ms scales, 1 scale = timer_step ms.
+  auto timer_step = time_wheel_scheduler_.timer_step_ms();
+  time_wheel_scheduler_.AppendTimeWheel(1000 / timer_step, timer_step, "MillisecondTimeWheel");
 }
 
 }  // namespace epoll_server

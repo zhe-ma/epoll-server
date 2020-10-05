@@ -11,6 +11,8 @@
 #include "epoll_server/thread_pool.h"
 #include "epoll_server/router_base.h"
 #include "epoll_server/message.h"
+#include "epoll_server/time_wheel_scheduler.h"
+#include "epoll_server/timer.h"
 
 namespace epoll_server {
 
@@ -36,6 +38,13 @@ public:
     on_disconnected_ = on_disconnected;
   }
 
+  // Return timer id. Return 0 if the timer creation fails.
+  uint32_t CreateTimerAt(int64_t when_ms, const TimerTask& task);
+  uint32_t CreateTimerAfter(int64_t delay_ms, const TimerTask& task);
+  uint32_t CreateTimerEvery(int64_t interval_ms, const TimerTask& task);
+
+  void CancelTimer(uint32_t timer_id);
+
 private:
   bool Listen();
 
@@ -47,11 +56,17 @@ private:
   
   void HandlePendingResponses();
 
+  void HandlePendingTimers();
+
   // Use thread pool to handle requests.
   void HandleRequest(MessagePtr request);
 
+  void HandleTimeWheelScheduler(TimerPtr timer);
+
   // Trigger a epoll event and wake up epoll_wait.
   void WakeUp();
+
+  void InitTimeWheelScheduler();
 
 private:
   int acceptor_fd_;
@@ -68,6 +83,11 @@ private:
 
   std::mutex pending_response_mutex_;
   std::vector<MessagePtr> pending_responses_;
+
+  std::mutex pending_timer_mutex_;
+  std::vector<TimerPtr> pending_timers_;
+
+  TimeWheelScheduler time_wheel_scheduler_;
 
   // The key is Message Code.
   std::unordered_map<uint16_t, RouterPtr> routers_;

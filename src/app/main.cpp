@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <unistd.h>
+#include <thread>
 
 #include "jsoncpp/json/json.h"
 
@@ -35,7 +36,22 @@ int main(int argc, char* const*argv) {
   });
 
   server.AddRouter(2020, RouterPtr(new Router));
-  server.Start();
+
+  std::thread t([&]{
+    server.Start();
+  });
+
+
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  auto timer_id = server.CreateTimerEvery(2000, []() {
+    std::cout << "Timer 2s." << std::endl;
+  });
+
+  std::this_thread::sleep_for(std::chrono::seconds(6));
+  server.CancelTimer(timer_id);
+
+  std::this_thread::sleep_for(std::chrono::seconds(1000));
+
 
   // // Backup environ and argv.
   // g_argv = (char**)argv;
