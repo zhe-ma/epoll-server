@@ -2,8 +2,11 @@
 TODO:
 
 0. 文档。
+
 1. 父进程可以重新创建新的子进程。
+
 2. 测试SignalHandler。
+
 4. InitSignal和CreateDaemon的调用顺序
 
 15. Bug总结
@@ -14,8 +17,6 @@ TODO:
 
   return bytes[1] | bytes[0] << 8;
 }
-
-19. 第五章笔记。
 
 22. thread safe queue可以使用circleQueue。
 
@@ -44,7 +45,8 @@ TODO:
 
 46. 连接数量控制。
 
-47. 心跳包 ： muduo idleconnection. https://blog.csdn.net/Solstice/article/details/6395098
+47. 业务层实现心跳包 ： muduo idleconnection. https://blog.csdn.net/Solstice/article/details/6395098
+
 
  * 在自己所属线程调用addTimerInLoop函数 
    * 用户只能通过初始创建的EventLoop调用addTimer，为什么还会考虑线程问题 why?
@@ -64,7 +66,24 @@ TODO:
 
 50. server property.
 
+53. logic——mutex。
+
+54. 业务层实现flood检测
+
+55. 阅读7-1之后的代码，检查哪些没实现。
+
+56. OnMessage回调?
+
+19. 六，七章笔记。
+
+53. 第五章笔记。
+
 52. core dump怎么调试。
+  sudo bash -c 'echo "/data/coredump/core.%e.%p" > /proc/sys/kernel/core_pattern'
+  https://zhuanlan.zhihu.com/p/98700797
+  https://www.cnblogs.com/lysuns/articles/4311810.html
+  https://blog.csdn.net/K346K346/article/details/48344263
+
 
 ==========================================================================
 DONE:
