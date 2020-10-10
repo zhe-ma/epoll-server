@@ -48,14 +48,6 @@ TODO:
 47. 业务层实现心跳包 ： muduo idleconnection. https://blog.csdn.net/Solstice/article/details/6395098
 
 
- * 在自己所属线程调用addTimerInLoop函数 
-   * 用户只能通过初始创建的EventLoop调用addTimer，为什么还会考虑线程问题 why?
-   * 这个线程和TcpServer的线程应该是同一个
-   */
-  loop_->runInLoop(
-      std::bind(&TimerQueue::addTimerInLoop, this, timer));
-  return TimerId(timer, timer->sequence());
-
 48. 发送消息队列过大也可能给服务器带来风险
     if(m_iSendMsgQueueCount > 50000)
     {
@@ -78,12 +70,9 @@ TODO:
 
 53. 第五章笔记。
 
-52. core dump怎么调试。
-  sudo bash -c 'echo "/data/coredump/core.%e.%p" > /proc/sys/kernel/core_pattern'
-  https://zhuanlan.zhihu.com/p/98700797
-  https://www.cnblogs.com/lysuns/articles/4311810.html
-  https://blog.csdn.net/K346K346/article/details/48344263
+53. protobuf 学习。
 
+53. cpp-unity-DatabaseDemo-master 学习。
 
 ==========================================================================
 DONE:
@@ -167,3 +156,18 @@ DONE:
   https://blog.csdn.net/sinat_35261315/article/details/78324227
   https://github.com/rpachon/wheel-timer-cpp
   https://github.com/gaover/timeWheels/blob/master/TimeWheels/TimeWheels.hpp
+
+  
+52. core dump怎么调试。
+  sudo bash -c 'echo "/data/coredump/core.%e.%p" > /proc/sys/kernel/core_pattern'
+  https://zhuanlan.zhihu.com/p/98700797
+  https://www.cnblogs.com/lysuns/articles/4311810.html
+  https://blog.csdn.net/K346K346/article/details/48344263
+
+54. 在自己所属线程调用addTimerInLoop函数 
+   * 用户只能通过初始创建的EventLoop调用addTimer，为什么还会考虑线程问题 why?
+   * 这个线程和TcpServer的线程应该是同一个
+   */
+  loop_->runInLoop(
+      std::bind(&TimerQueue::addTimerInLoop, this, timer));
+  return TimerId(timer, timer->sequence());
