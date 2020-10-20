@@ -16,7 +16,6 @@ A network framework.
 
 - Integrate spdlog, jsoncpp and so on.
 
-
 ## Message format
 
 - Message = Header + Body
@@ -28,13 +27,6 @@ A network framework.
 | Type | uint16 | uint16 | uint32 | byte |
 | Size | 2 bytes | 2 bytes | 4 bytes | length |
 | ByteOrder | Little Endian | Little Endian | Little Endian | bytes |
-
----------------------------------------------------
-| Filed | Data Length | Message Code | CRC32 | Data|
-
-| Type |  uint16     | uint16     | uint32 | byte
-| Size | 2 bytes     | 2 bytes      |  4 bytes | 
-| Byte Order | Little Endian | Little Endian | Little Endian |
 
 ## Build
 
