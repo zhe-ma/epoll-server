@@ -20,7 +20,7 @@ class Router : public RouterBase {
   }
 };
 
-// ps -eo pid,ppid,sid,tty,pgrp,comm,stat,cmd | grep -E 'bash|PID|epoll_server'
+// ps -eo pid,ppid,sid,tty,pgrp,comm,stat,cmd | grep -E 'bash|PID|Server'
 // netstat -anp | grep -E 'State|9000'
 
 int main(int argc, char* const*argv) {

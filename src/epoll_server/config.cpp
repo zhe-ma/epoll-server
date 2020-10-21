@@ -12,6 +12,7 @@ Config::Config()
     , log_rotate_size(5242880)
     , log_rotate_count(10)
     , deamon_mode(false)
+    , master_worker_mode(false)
     , process_worker_count(2)
     , port(9527)
     , connection_pool_size(20000)
@@ -35,6 +36,7 @@ void Config::Load(const std::string& file_path) {
   log_rotate_count = log_config["rotateFileCount"].asUInt();
 
   const Json::Value& process_config = config["process"];
+  master_worker_mode = process_config["masterWorkerMode"].asBool();
   process_worker_count = process_config["workerCount"].asUInt();
   deamon_mode = process_config["daemonMode"].asBool();
 

@@ -26,6 +26,7 @@ public:
   std::size_t log_rotate_size;
 
   // Process config.
+  bool master_worker_mode;
   size_t process_worker_count;
   bool deamon_mode;
 

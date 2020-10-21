@@ -26,7 +26,7 @@ public:
 
   void Init(const std::string& config_path = "conf/config.json");
 
-  bool Start();
+  void Start();
 
   void AddRouter(uint16_t msg_code, RouterPtr router);
 
@@ -46,6 +46,11 @@ public:
   void CancelTimer(uint32_t timer_id);
 
 private:
+  bool StartServer();
+
+  bool StartMasterAndWorkers();
+  void StartWorkers();
+
   bool Listen();
 
   bool PollOnce();

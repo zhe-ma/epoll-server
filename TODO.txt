@@ -5,6 +5,8 @@ TODO:
 
 1. 父进程可以重新创建新的子进程。
 
+5. waitpid.
+
 2. 测试SignalHandler。
 
 4. InitSignal和CreateDaemon的调用顺序
@@ -17,6 +19,8 @@ TODO:
 
   return bytes[1] | bytes[0] << 8;
 }
+
+16. Timer is invalid in Master-Worker mode.
 
 22. thread safe queue可以使用circleQueue。
 

@@ -1,6 +1,7 @@
 #include "epoll_server/server.h"
 
 #include <unistd.h>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/eventfd.h>
@@ -33,7 +34,42 @@ void Server::Init(const std::string& config_path) {
   InitTimeWheelScheduler();
 }
 
-bool Server::Start() {
+void Server::Start() {
+  if (!CONFIG.deamon_mode && !CONFIG.master_worker_mode) {
+    StartServer();
+    return;
+  }
+
+  if (!CONFIG.deamon_mode && CONFIG.master_worker_mode) {
+    StartMasterAndWorkers();
+    return;
+  }
+  
+
+  
+}
+
+void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
+  routers_[msg_code] = router;
+}
+
+uint32_t Server::CreateTimerAt(int64_t when_ms, const TimerTask& task) {
+  return time_wheel_scheduler_.CreateTimerAt(when_ms, task);
+}
+
+uint32_t Server::CreateTimerAfter(int64_t delay_ms, const TimerTask& task) {
+  return time_wheel_scheduler_.CreateTimerAfter(delay_ms, task);
+}
+
+uint32_t Server::CreateTimerEvery(int64_t interval_ms, const TimerTask& task) {
+  return time_wheel_scheduler_.CreateTimerEvery(interval_ms, task);
+}
+
+void Server::CancelTimer(uint32_t timer_id) {
+  time_wheel_scheduler_.CancelTimer(timer_id);
+}
+
+bool Server::StartServer() {
   SPDLOG_TRACK_METHOD;
 
   if (!epoller_.Create()) {
@@ -92,24 +128,69 @@ bool Server::Start() {
   return true;
 }
 
-void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
-  routers_[msg_code] = router;
+bool Server::StartMasterAndWorkers() {
+  SPDLOG_TRACK_METHOD;
+
+  // SetMasterProcessTitle();
+
+  // if (!InitSignals()) {
+  //   return false;
+  // }
+
+  // SPDLOG_DEBUG("Init signals sucessfully.");
+  // SPDLOG_DEBUG("Init socket sucessfully.");
+
+  // // Block signals before call fork().
+  // BlockMasterProcessSignals();
+
+  StartWorkers();
+  
+  sigset_t set;
+  sigemptyset(&set);
+
+  // The handling of master process.
+  for (;;) {
+    // sigsuspend的作用：
+    // 1. 根据给定的参数设置新的mask并阻塞当前进程。
+    // 2. 如果收到信号，则恢复原先的信号屏蔽。
+    // 3. 调用该信号对应的信号处理函数。
+    // 4. 信号处理函数返回后，sigsuspend返回，使程序流程继续往下走。
+    sigsuspend(&set);  // 阻塞在这里，等待一个信号，此时进程是挂起的，不占用cpu时间，只有收到信号才会被唤醒。
+    SPDLOG_DEBUG("I'm master: {}", getpid());
+  }
+
+  return true;
 }
 
-uint32_t Server::CreateTimerAt(int64_t when_ms, const TimerTask& task) {
-  return time_wheel_scheduler_.CreateTimerAt(when_ms, task);
-}
+void Server::StartWorkers() {
+  SPDLOG_TRACK_METHOD;
 
-uint32_t Server::CreateTimerAfter(int64_t delay_ms, const TimerTask& task) {
-  return time_wheel_scheduler_.CreateTimerAfter(delay_ms, task);
-}
+  for (size_t i = 0; i < CONFIG.process_worker_count; ++i) {
+    pid_t pid = fork();
+    if (pid == -1) {
+      SPDLOG_ERROR("Failed to fork worker process.");
+      continue;
+    }
 
-uint32_t Server::CreateTimerEvery(int64_t interval_ms, const TimerTask& task) {
-  return time_wheel_scheduler_.CreateTimerEvery(interval_ms, task);
-}
+    if (pid > 0) {
+      continue;
+    }
 
-void Server::CancelTimer(uint32_t timer_id) {
-  time_wheel_scheduler_.CancelTimer(timer_id);
+    // pid == 0: Child process will execute the following code.
+
+    SPDLOG_DEBUG("Fork a new child process. PID: {}.", getpid());
+
+    // Unmask all signals masked by master process.
+    sigset_t set;
+    sigemptyset(&set);
+    int ret = sigprocmask(SIG_SETMASK, &set, nullptr);
+    SPDLOG_DEBUG("Unmask all signals masked by master process: {}.", ret);
+
+    // SetProcessTitle(kWorkerProcessTitle);
+    if (!StartServer()) {
+      SPDLOG_DEBUG("Child process failed to start server. PID: {}.", getpid());
+    }
+  }
 }
 
 bool Server::Listen() {
