@@ -24,7 +24,7 @@ public:
 
   ~Server() = default;
 
-  void Init(const std::string& config_path = "conf/config.json");
+  bool Init(const std::string& config_path = "conf/config.json");
 
   void Start();
 

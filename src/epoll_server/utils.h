@@ -15,6 +15,7 @@ bool SetClosexc(int fd);
 bool Bind(int fd, unsigned short port);
 
 bool SetReuseAddr(int fd);
+bool SetReusePort(int fd);
 
 // Return > 0: Receiving data count.
 // Return = 0: EAGAIN or EWOULDBLOCK or EINTR.

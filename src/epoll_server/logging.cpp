@@ -49,7 +49,8 @@ void InitLogging(const std::string& file_name, const std::string& level,
   auto logger = std::make_shared<spdlog::logger>("logger", spdlog::sinks_init_list{file_sink, stderr_sink});
   logger->set_level(spdlog::level::trace);
   logger->flush_on(GetLogLevel(level));
-  logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e %z] [T:%-5t] [P:%-5P] [%-5l] [%=30@] %v");
+  // logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e %z] [T:%-5t] [P:%-5P] [%-5l] [%=30@] %v");
+  logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e %z] [T:%-5t] [P:%-5P] [%-5l] [%s:%#] %v");
 
   spdlog::set_default_logger(logger);
 }

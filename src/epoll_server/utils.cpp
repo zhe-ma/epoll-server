@@ -65,6 +65,17 @@ bool SetReuseAddr(int fd) {
   return true;
 }
 
+bool SetReusePort(int fd) {
+  int reuse_port = 1;
+  int ret = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (const void*)&reuse_port,
+                      sizeof(reuse_port));
+  if (ret == -1) {
+    return false;
+  }
+
+  return true;
+}
+
 int Recv(int fd, char* buf, size_t buf_len) {
   ssize_t n = recv(fd, buf, buf_len, 0);
 

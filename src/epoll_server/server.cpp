@@ -22,7 +22,7 @@ Server::Server()
     , time_wheel_scheduler_(50) {
 }
 
-void Server::Init(const std::string& config_path) {
+bool Server::Init(const std::string& config_path) {
   CONFIG.Load(config_path);
 
   InitLogging(CONFIG.log_filename, CONFIG.log_file_level, CONFIG.log_rotate_size,
@@ -32,6 +32,20 @@ void Server::Init(const std::string& config_path) {
   connection_pool_.reset(new ConnectionPool(CONFIG.connection_pool_size));
 
   InitTimeWheelScheduler();
+
+  // SOCK_STREAM: TCP. Sequenced, reliable, connection-based byte streams.
+  // SOCK_CLOEXEC: Atomically set close-on-exec flag for the new descriptor(s).
+  acceptor_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+  if (acceptor_fd_ == -1) {
+    SPDLOG_ERROR("Failed to create socket.");
+    return false;
+  }
+
+  if (!Listen()) {
+    return false;
+  }
+
+  return true;
 }
 
 void Server::Start() {
@@ -44,9 +58,6 @@ void Server::Start() {
     StartMasterAndWorkers();
     return;
   }
-  
-
-  
 }
 
 void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
@@ -76,14 +87,6 @@ bool Server::StartServer() {
     return false;
   }
 
-  // SOCK_STREAM: TCP. Sequenced, reliable, connection-based byte streams.
-  // SOCK_CLOEXEC: Atomically set close-on-exec flag for the new descriptor(s).
-  acceptor_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
-  if (acceptor_fd_ == -1) {
-    SPDLOG_ERROR("Failed to create socket.");
-    return false;
-  }
-
   acceptor_connection_.reset(new Connection(acceptor_fd_, Connection::kTypeAcceptor));
   acceptor_connection_->SetReadEvent(true);
   if (!epoller_.Add(acceptor_connection_->fd(), acceptor_connection_->epoll_events(),
@@ -107,10 +110,6 @@ bool Server::StartServer() {
   request_thread_pool_.Start(CONFIG.thread_pool_size, [this](MessagePtr msg) {
     HandleRequest(msg);
   });
-
-  if (!Listen()) {
-    return false;
-  }
 
   time_wheel_scheduler_.Start([this](TimerPtr timer) {
     HandleTimeWheelScheduler(timer);
@@ -197,6 +196,11 @@ bool Server::Listen() {
   // Enable SO_REUSEADDR option to avoid that TIME_WAIT prevents the server restarting.
   if (!sock::SetReuseAddr(acceptor_fd_)) {
     SPDLOG_ERROR("Failed to set SO_REUSEADDR");
+    return false;
+  }
+
+  if (!sock::SetReuseAddr(acceptor_fd_)) {
+    SPDLOG_ERROR("Failed to set SO_REUSEPORT");
     return false;
   }
 

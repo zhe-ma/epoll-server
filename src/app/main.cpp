@@ -37,21 +37,11 @@ int main(int argc, char* const*argv) {
 
   server.AddRouter(2020, RouterPtr(new Router));
 
-  std::thread t([&]{
-    server.Start();
-  });
-
-
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  auto timer_id = server.CreateTimerEvery(2000, []() {
+  auto timer_id = server.CreateTimerEvery(10000, []() {
     std::cout << "Timer 2s." << std::endl;
   });
 
-  std::this_thread::sleep_for(std::chrono::seconds(6));
-  server.CancelTimer(timer_id);
-
-  std::this_thread::sleep_for(std::chrono::seconds(1000));
-
+  server.Start();
 
   // // Backup environ and argv.
   // g_argv = (char**)argv;

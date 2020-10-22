@@ -11,6 +11,10 @@ TODO:
 
 4. InitSignal和CreateDaemon的调用顺序
 
+5. Bug: 一千五左右个连接会卡住。
+
+6. Bug: 只有一个进程起作用。
+
 15. Bug总结
  std::uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
   if (byte_order == kLittleEndian) {
