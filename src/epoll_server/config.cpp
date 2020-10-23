@@ -17,7 +17,9 @@ Config::Config()
     , port(9527)
     , connection_pool_size(20000)
     , thread_pool_size(4)
-    , max_data_length(3000) {
+    , max_data_length(3000)
+    , master_title("ServerMaster")
+    , worker_title("ServerWorker") {
 }
 
 void Config::Load(const std::string& file_path) {
@@ -39,6 +41,8 @@ void Config::Load(const std::string& file_path) {
   master_worker_mode = process_config["masterWorkerMode"].asBool();
   process_worker_count = process_config["workerCount"].asUInt();
   deamon_mode = process_config["daemonMode"].asBool();
+  master_title = process_config["masterTitle"].asString();
+  worker_title = process_config["workerTitle"].asString();
 
   const Json::Value& socket_config = config["socket"];
   port = static_cast<std::uint16_t>(socket_config["port"].asUInt());

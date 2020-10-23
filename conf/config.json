@@ -9,8 +9,10 @@
 
   "process" : {
     "masterWorkerMode" : true,
-    "workerCount" : 3,
-    "daemonMode" : false
+    "workerCount" : 2,
+    "daemonMode" : false,
+    "masterTitle" : "ServerMaster",
+    "workerTitle" : "ServerWoker"
   },
 
   "socket" : {

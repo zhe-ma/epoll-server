@@ -23,9 +23,9 @@ class Router : public RouterBase {
 // ps -eo pid,ppid,sid,tty,pgrp,comm,stat,cmd | grep -E 'bash|PID|Server'
 // netstat -anp | grep -E 'State|9000'
 
-int main(int argc, char* const*argv) {
+int main(int argc, char* const* argv) {
   Server server;
-  server.Init();
+  server.Init(argc, (char**)argv);
 
   server.set_on_connected([](Connection* conn) {
     SPDLOG_DEBUG("OnConnection: {} {}", conn->remote_ip(), conn->remote_port());
@@ -37,27 +37,15 @@ int main(int argc, char* const*argv) {
 
   server.AddRouter(2020, RouterPtr(new Router));
 
-  auto timer_id = server.CreateTimerEvery(10000, []() {
-    std::cout << "Timer 2s." << std::endl;
+  std::thread t([&](){
+    server.Start();
   });
 
-  server.Start();
+  server.CreateTimerEvery(10000, []() {
+    std::cout << getpid() << ": Timer 10s." << std::endl;
+  });
 
-  // // Backup environ and argv.
-  // g_argv = (char**)argv;
-  // g_argc = argc;
-  // BackupEnviron();
-
-  // if (CONFIG.deamon_mode) {
-  //   // Daemon process.
-  //   if (CreateDaemonProcess() == 0) {
-  //     Server server;
-  //     server.Start();
-  //   }
-  // } else {
-  //   Server server;
-  //   server.Start();
-  // }
+  sleep(100);
 
   return 0;
 }

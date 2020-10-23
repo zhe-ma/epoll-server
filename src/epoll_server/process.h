@@ -16,6 +16,10 @@ bool SetProcessTitle(const std::string& title);
 // return value < 0  : fork error 
 int CreateDaemonProcess();
 
+void BlockMasterProcessSignals();
+
+bool InitSignals();
+
 }  // namespace epoll_server
 
 #endif  // EPOLL_SERVER_PROCESS_H_

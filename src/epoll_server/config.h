@@ -29,6 +29,8 @@ public:
   bool master_worker_mode;
   size_t process_worker_count;
   bool deamon_mode;
+  std::string master_title;
+  std::string worker_title;
 
   // Socket config.
   uint16_t port;

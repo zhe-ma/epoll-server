@@ -5,15 +5,46 @@ TODO:
 
 1. 父进程可以重新创建新的子进程。
 
-5. waitpid.
-
 2. 测试SignalHandler。
+  { SIGHUP, "SIGHUP", SignalHandler },  // 终止进程，终端线路挂断。
+  { SIGINT, "SIGINT", SignalHandler },  // 终止进程，中断进程，Ctrl+C。
+  { SIGTERM, "SIGTERM", SignalHandler },  // 终止进程，软件终止信号。
+  { SIGCHLD, "SIGCHLD", SignalHandler },  // 当子进程停止或退出时通知父进程。
+  { SIGQUIT, "SIGQUIT", SignalHandler },  // 建立CORE文件终止进程，并且生成core文件，Ctrl+\。
+  { SIGIO, "SIGIO", SignalHandler },  // 通用异步I/O信号。
+  { SIGSYS, "SIGSYS", nullptr },  // 非法的系统调用。忽略该信号，防止进程被操作系统杀掉。
 
-4. InitSignal和CreateDaemon的调用顺序
+  sigaddset(&set, SIGCHLD);  // 当子进程停止或退出时通知父进程。
+  sigaddset(&set, SIGALRM);  // 定时器超时。
+  sigaddset(&set, SIGIO);  // 异步I/O信号。
+  sigaddset(&set, SIGINT);  // 终止进程，中断进程，Ctrl+C。
+  sigaddset(&set, SIGHUP);  // 终止进程，终端线路挂断。
+  sigaddset(&set, SIGUSR1);  // 用户定义信号。
+  sigaddset(&set, SIGUSR2);  // 用户定义信号。
+  sigaddset(&set, SIGWINCH); // 终端窗口大小改变。
+  sigaddset(&set, SIGTERM);  // 终止进程，软件终止信号。
+  sigaddset(&set, SIGQUIT);  // 建立CORE文件终止进程，并且生成core文件，Ctrl+\。  
+
+
+  // setsid()调用成功后，返回新的会话的ID。
+  // 调用setsid函数的进程成为新的会话的leader进程，并与其父进程的会话组和进程组脱离。
+  // 由于会话对控制终端的独占性，进程同时与控制终端脱离。
+  // 从而达到脱离终端，终端关闭，将跟此子进程无关的目的。
+
+    // 权限掩码。0代表不掩码任何权限，设置允许当前进程创建文件或者目录最大可操作的权限。
+  // 避免了创建目录或文件的权限不确定性。
+  umask(0);
+
+  
+  // dup2函数有2个参数fd1和fd2。如果文件描述符表的fd2条目是打开的，dup2将其关闭，并将fd1的指针拷贝到条目fd2中去。
+  // dup2执行失败返回-1，执行成功返回被复制的文件描述符。
+  // 使STDIN_FILENO重定向到/dev/null。
+
+
+9. kill -9 时stop()
 
 5. Bug: 一千五左右个连接会卡住。
 
-6. Bug: 只有一个进程起作用。
 
 15. Bug总结
  std::uint16_t BytesToUint16(ByteOrder byte_order, char bytes[4]) {
@@ -24,13 +55,10 @@ TODO:
   return bytes[1] | bytes[0] << 8;
 }
 
-16. Timer is invalid in Master-Worker mode.
-
 22. thread safe queue可以使用circleQueue。
 
 24. error时log要有函数参数和函数名。
 
-26. 阅读muduo实现
 
 36. 整理笔记时，将注释放到笔记。
   // EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。
@@ -181,3 +209,13 @@ DONE:
   return TimerId(timer, timer->sequence());
 
 53. cpp-unity-DatabaseDemo-master 学习。
+
+6. Bug: 只有一个进程起作用。
+
+5. waitpid.
+
+16. Timer is invalid in Master-Worker mode.
+
+4. InitSignal和CreateDaemon的调用顺序
+
+26. 阅读muduo实现

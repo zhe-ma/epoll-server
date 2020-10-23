@@ -1,8 +1,10 @@
 #include "epoll_server/process.h"
 
 #include <unistd.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 #include <memory>
 
@@ -41,6 +43,10 @@ void BackupEnviron() {
 }
 
 bool SetProcessTitle(const std::string& title) {
+  if (title.empty()) {
+    return true;
+  }
+
   std::size_t max_name_size = s_environ_size + s_argv_size;
   if (title.size() >= max_name_size) {
     return false;
@@ -76,35 +82,24 @@ int CreateDaemonProcess() {
 
   // Child daemon process.
 
-  // setsid()调用成功后，返回新的会话的ID。
-  // 调用setsid函数的进程成为新的会话的leader进程，并与其父进程的会话组和进程组脱离。
-  // 由于会话对控制终端的独占性，进程同时与控制终端脱离。
-  // 从而达到脱离终端，终端关闭，将跟此子进程无关的目的。
   if (setsid() == -1) {
     SPDLOG_ERROR("failed to setsid.");
     return -1;
   }
 
-  // 权限掩码。0代表不掩码任何权限，设置允许当前进程创建文件或者目录最大可操作的权限。
-  // 避免了创建目录或文件的权限不确定性。
   umask(0);
 
-  // 以读写方式打开黑洞设备文件。
   int fd = open("/dev/null", O_RDWR);
   if (fd == -1) {
     SPDLOG_ERROR("Failed to open /dev/null.");
     return -1;
   }
 
-  // dup2函数有2个参数fd1和fd2。如果文件描述符表的fd2条目是打开的，dup2将其关闭，并将fd1的指针拷贝到条目fd2中去。
-  // dup2执行失败返回-1，执行成功返回被复制的文件描述符。
-  // 使STDIN_FILENO重定向到/dev/null。
   if (dup2(fd, STDIN_FILENO) == -1) {
     SPDLOG_ERROR("Failed to dup2 STDIN_FILENO.");
     return -1;
   }
 
-  // 使STDOUT_FILENO重定向到/dev/null。
   if (dup2(fd, STDOUT_FILENO) == -1) {
     SPDLOG_ERROR("Failed to dup2 STDOUT_FILENO.");
     return -1;
@@ -122,6 +117,122 @@ int CreateDaemonProcess() {
   }
 
   return pid;
+}
+
+struct SignalAction {
+  int signo;
+  std::string signo_name;
+  void (*handler)(int signo, siginfo_t* siginfo, void* ucontext);
+};
+
+void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext);
+
+const SignalAction kSignalActions[] = {
+  { SIGHUP, "SIGHUP", SignalHandler },  // Terminal hangup.
+  { SIGINT, "SIGINT", SignalHandler },  // Interactive attention signal. Ctrl+C.
+  { SIGTERM, "SIGTERM", SignalHandler },  // Termination request.
+  { SIGCHLD, "SIGCHLD", SignalHandler },  // Child terminated or stopped.
+  { SIGQUIT, "SIGQUIT", SignalHandler },  // Quit. Generate core file. Ctrl+\.
+  { SIGIO, "SIGIO", SignalHandler },  // I/O now possible.
+  { SIGSYS, "SIGSYS", nullptr },  // Bad system call.
+};
+
+std::string GetSignalName(int signo) {
+  for (const auto& sig_action : kSignalActions) {
+    if (signo == sig_action.signo) {
+      return sig_action.signo_name;
+    }
+  }
+
+  return "";
+}
+
+void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext) {
+  SPDLOG_TRACK_METHOD;
+
+  SPDLOG_DEBUG("Signal: {}, Name: {}.", signo, GetSignalName(signo));
+
+  // siginfo->si_pid: The process ID of the signal sender.
+  if (siginfo != nullptr) {
+    SPDLOG_DEBUG("Received signal [{}, {}] from PID [{}].", signo, GetSignalName(signo), siginfo->si_pid);
+  }
+
+  // Parent process should call wait or waitpid to avoid killed child process to be a defunct.
+  if (signo == SIGCHLD) {
+    bool once = false;
+    for ( ; ; ) {
+
+      // -1 : Wait any child process.
+      // WNOHANG : Non-blocking.
+      int status = 0;
+      pid_t pid = waitpid(-1, &status, WNOHANG);
+
+      // The child hasn't ended.
+      if (pid == 0) {
+        SPDLOG_DEBUG("The child hasn't ended.");
+        return;
+      }else if (pid == -1) {
+        SPDLOG_WARN("Failed to waitpid. Error: {}.", errno);
+        return;
+      }
+
+      // Get the signal id that make child process end.
+      if (WTERMSIG(status) > 0) {
+        SPDLOG_DEBUG("Child process [PID : {}] exited on signal [{}].", pid, WTERMSIG(status));
+      } else {
+        SPDLOG_DEBUG("Child process [PID : {}] exited with error code [{}].", pid, WEXITSTATUS(status));
+      }
+    }
+  }
+}
+
+bool InitSignals() {
+  SPDLOG_TRACK_METHOD;
+
+  for (const auto& signal_action : kSignalActions) {
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+
+    if (signal_action.handler == nullptr) {
+      // Ignore signal.
+      sa.sa_handler = SIG_IGN;
+    } else {
+      // Invoke signal-catching function with three arguments instead of one.
+      sa.sa_flags = SA_SIGINFO;
+      sa.sa_sigaction = signal_action.handler;
+    }
+
+    // Empty the mask not to block any signal.
+    sigemptyset(&sa.sa_mask);   
+
+    if (sigaction(signal_action.signo, &sa, nullptr) == -1) {
+      SPDLOG_CRITICAL("Failed to sigaction: {}.", signal_action.signo_name);
+      return false;
+    }
+
+    SPDLOG_DEBUG("Sigaction signal {} successfully!", signal_action.signo_name);
+  }
+
+  return true;
+}
+
+void BlockMasterProcessSignals() {
+  sigset_t set;
+  sigemptyset(&set);
+
+  sigaddset(&set, SIGCHLD);  // Child terminated or stopped.
+  sigaddset(&set, SIGALRM);  // Alarm clock.
+  sigaddset(&set, SIGIO);  // I/O now possible.
+  sigaddset(&set, SIGINT);  // Interactive attention signal. Ctrl+C.
+  sigaddset(&set, SIGHUP);  // Terminal hangup.
+  sigaddset(&set, SIGUSR1);  // User-defined signal 1.
+  sigaddset(&set, SIGUSR2);  // User-defined signal 2.
+  sigaddset(&set, SIGWINCH); // Window size change.
+  sigaddset(&set, SIGTERM);  // Termination request.
+  sigaddset(&set, SIGQUIT);  // Quit. Generate core file. Ctrl+\.
+
+  int ret = sigprocmask(SIG_BLOCK, &set, nullptr);
+  SPDLOG_DEBUG("Master process blocks signals: {}.", ret);
 }
 
 }  // namespace epoll_server

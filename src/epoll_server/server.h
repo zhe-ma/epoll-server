@@ -24,7 +24,7 @@ public:
 
   ~Server() = default;
 
-  bool Init(const std::string& config_path = "conf/config.json");
+  bool Init(int argc, char** argv, const std::string& config_path = "conf/config.json");
 
   void Start();
 
@@ -51,7 +51,7 @@ private:
   bool StartMasterAndWorkers();
   void StartWorkers();
 
-  bool Listen();
+  bool InitAcceptor();
 
   bool PollOnce();
 

@@ -36,6 +36,15 @@
       "problemMatcher": []
     },
     {
+      "label": "make and run",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/src/app/Server",
+      "dependsOn": [
+        "make",
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "test",
       "type": "shell",
       "command": "go  test  test/client  -count=1 -v",

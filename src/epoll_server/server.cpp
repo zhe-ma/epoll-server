@@ -13,6 +13,7 @@
 #include "epoll_server/utils.h"
 #include "epoll_server/connection.h"
 #include "epoll_server/message.h"
+#include "epoll_server/process.h"
 
 namespace epoll_server {
 
@@ -22,26 +23,19 @@ Server::Server()
     , time_wheel_scheduler_(50) {
 }
 
-bool Server::Init(const std::string& config_path) {
+bool Server::Init(int argc, char** argv, const std::string& config_path) {
+  g_argc = argc;
+  g_argv = argv;
+
   CONFIG.Load(config_path);
 
   InitLogging(CONFIG.log_filename, CONFIG.log_file_level, CONFIG.log_rotate_size,
               CONFIG.log_rotate_count, CONFIG.log_console_level);
   SPDLOG_DEBUG("==========================================================");
 
-  connection_pool_.reset(new ConnectionPool(CONFIG.connection_pool_size));
-
   InitTimeWheelScheduler();
 
-  // SOCK_STREAM: TCP. Sequenced, reliable, connection-based byte streams.
-  // SOCK_CLOEXEC: Atomically set close-on-exec flag for the new descriptor(s).
-  acceptor_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
-  if (acceptor_fd_ == -1) {
-    SPDLOG_ERROR("Failed to create socket.");
-    return false;
-  }
-
-  if (!Listen()) {
+  if (!InitAcceptor()) {
     return false;
   }
 
@@ -49,15 +43,18 @@ bool Server::Init(const std::string& config_path) {
 }
 
 void Server::Start() {
-  if (!CONFIG.deamon_mode && !CONFIG.master_worker_mode) {
-    StartServer();
-    return;
+  if (CONFIG.deamon_mode) {
+    if (CreateDaemonProcess() > 0) {
+      exit(0);
+    }
   }
 
-  if (!CONFIG.deamon_mode && CONFIG.master_worker_mode) {
+  if (CONFIG.master_worker_mode) {
     StartMasterAndWorkers();
     return;
   }
+
+  StartServer();
 }
 
 void Server::AddRouter(uint16_t msg_code, RouterPtr router) {
@@ -82,6 +79,8 @@ void Server::CancelTimer(uint32_t timer_id) {
 
 bool Server::StartServer() {
   SPDLOG_TRACK_METHOD;
+
+  connection_pool_.reset(new ConnectionPool(CONFIG.connection_pool_size));
 
   if (!epoller_.Create()) {
     return false;
@@ -130,17 +129,18 @@ bool Server::StartServer() {
 bool Server::StartMasterAndWorkers() {
   SPDLOG_TRACK_METHOD;
 
-  // SetMasterProcessTitle();
+  BackupEnviron();
 
-  // if (!InitSignals()) {
-  //   return false;
-  // }
+  SetProcessTitle(CONFIG.master_title);
 
-  // SPDLOG_DEBUG("Init signals sucessfully.");
-  // SPDLOG_DEBUG("Init socket sucessfully.");
+  if (!InitSignals()) {
+    return false;
+  }
 
-  // // Block signals before call fork().
-  // BlockMasterProcessSignals();
+  SPDLOG_DEBUG("Init signals sucessfully.");
+
+  // Block signals before call fork().
+  BlockMasterProcessSignals();
 
   StartWorkers();
   
@@ -185,14 +185,22 @@ void Server::StartWorkers() {
     int ret = sigprocmask(SIG_SETMASK, &set, nullptr);
     SPDLOG_DEBUG("Unmask all signals masked by master process: {}.", ret);
 
-    // SetProcessTitle(kWorkerProcessTitle);
+    SetProcessTitle(CONFIG.worker_title);
     if (!StartServer()) {
       SPDLOG_DEBUG("Child process failed to start server. PID: {}.", getpid());
     }
   }
 }
 
-bool Server::Listen() {
+bool Server::InitAcceptor() {
+  // SOCK_STREAM: TCP. Sequenced, reliable, connection-based byte streams.
+  // SOCK_CLOEXEC: Atomically set close-on-exec flag for the new descriptor(s).
+  acceptor_fd_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+  if (acceptor_fd_ == -1) {
+    SPDLOG_ERROR("Failed to create socket.");
+    return false;
+  }
+
   // Enable SO_REUSEADDR option to avoid that TIME_WAIT prevents the server restarting.
   if (!sock::SetReuseAddr(acceptor_fd_)) {
     SPDLOG_ERROR("Failed to set SO_REUSEADDR");
