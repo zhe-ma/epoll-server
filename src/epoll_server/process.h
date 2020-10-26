@@ -7,6 +7,7 @@ namespace epoll_server {
 
 extern char** g_argv;
 extern int g_argc;
+extern bool g_reap;
 
 void BackupEnviron();
 bool SetProcessTitle(const std::string& title);

@@ -142,8 +142,10 @@ bool Server::StartMasterAndWorkers() {
   // Block signals before call fork().
   BlockMasterProcessSignals();
 
-  StartWorkers();
-  
+  for (size_t i = 0; i < CONFIG.process_worker_count; ++i) {
+    StartWorker();
+  }
+
   sigset_t set;
   sigemptyset(&set);
 
@@ -156,42 +158,40 @@ bool Server::StartMasterAndWorkers() {
     // 4. 信号处理函数返回后，sigsuspend返回，使程序流程继续往下走。
     sigsuspend(&set);  // 阻塞在这里，等待一个信号，此时进程是挂起的，不占用cpu时间，只有收到信号才会被唤醒。
 
-    sleep(1);
+    if (g_reap) {
+      StartWorker();
+      g_reap = false;
+    }
 
-    SPDLOG_DEBUG("I'm master: {}", getpid());
+    sleep(1);
   }
 
   return true;
 }
 
-void Server::StartWorkers() {
+void Server::StartWorker() {
   SPDLOG_TRACK_METHOD;
 
-  for (size_t i = 0; i < CONFIG.process_worker_count; ++i) {
-    pid_t pid = fork();
-    if (pid == -1) {
-      SPDLOG_ERROR("Failed to fork worker process.");
-      continue;
-    }
+  pid_t pid = fork();
+  if (pid == -1) {
+    SPDLOG_ERROR("Failed to fork worker process.");
+    return;
+  } else if (pid > 0) {
+    return;
+  }
 
-    if (pid > 0) {
-      continue;
-    }
+  // pid == 0: Child process will execute the following code.
+  SPDLOG_DEBUG("Fork a new child process. PID: {}.", getpid());
 
-    // pid == 0: Child process will execute the following code.
+  // Unmask all signals masked by master process.
+  sigset_t set;
+  sigemptyset(&set);
+  int ret = sigprocmask(SIG_SETMASK, &set, nullptr);
+  SPDLOG_DEBUG("Unmask all signals masked by master process: {}.", ret);
 
-    SPDLOG_DEBUG("Fork a new child process. PID: {}.", getpid());
-
-    // Unmask all signals masked by master process.
-    sigset_t set;
-    sigemptyset(&set);
-    int ret = sigprocmask(SIG_SETMASK, &set, nullptr);
-    SPDLOG_DEBUG("Unmask all signals masked by master process: {}.", ret);
-
-    SetProcessTitle(CONFIG.worker_title);
-    if (!StartServer()) {
-      SPDLOG_DEBUG("Child process failed to start server. PID: {}.", getpid());
-    }
+  SetProcessTitle(CONFIG.worker_title);
+  if (!StartServer()) {
+    SPDLOG_DEBUG("Child process failed to start server. PID: {}.", getpid());
   }
 }
 

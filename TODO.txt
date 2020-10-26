@@ -59,6 +59,8 @@ TODO:
 
 24. error时log要有函数参数和函数名。
 
+27. 整理utility函数，json...
+
 
 36. 整理笔记时，将注释放到笔记。
   // EPOLLIN: socket可以读, 对端SOCKET正常关闭, 客户端三次握手连接。

@@ -14,6 +14,7 @@ namespace epoll_server {
 
 char** g_argv = nullptr;
 int g_argc = 0;
+bool g_reap = false;
 
 static std::size_t s_environ_size = 0;
 static std::size_t s_argv_size = 0;
@@ -105,7 +106,7 @@ int CreateDaemonProcess() {
     return -1;
   }
 
-  // STDIN_FILENO 0	Standard input.
+  // STDIN_FILENO 0 Standard input.
   // STDOUT_FILENO 1 Standard output.
   // STDERR_FILENO 2 Standard error output.
   // So fd must be greater than 2.
@@ -150,7 +151,7 @@ std::string GetSignalName(int signo) {
 void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext) {
   SPDLOG_TRACK_METHOD;
 
-  SPDLOG_DEBUG("Signal: {}, Name: {}.", signo, GetSignalName(signo));
+  SPDLOG_DEBUG("Process[{}] receives signal[{}:{}].", getpid(), signo, GetSignalName(signo));
 
   // siginfo->si_pid: The process ID of the signal sender.
   if (siginfo != nullptr) {
@@ -158,30 +159,39 @@ void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext) {
   }
 
   // Parent process should call wait or waitpid to avoid killed child process to be a defunct.
-  if (signo == SIGCHLD) {
-    for (; ;) {
-      int status = 0;
-      pid_t pid = waitpid(WAIT_ANY, &status, WNOHANG);  // WNOHANG : Non-blocking.
+  if (signo != SIGCHLD) {
+    return;
+  }
 
-      // The child hasn't ended.
-      if (pid == 0) {
-        SPDLOG_DEBUG("The child hasn't ended.");
-        return;
-      } else if (pid == -1) {
-        SPDLOG_WARN("Failed to waitpid. Error: {}.", errno);
-        if (errno == EINTR) {
-          continue;
-        }
+  for (; ;) {
+    bool once = false;
+    int status = 0;
+    pid_t pid = waitpid(WAIT_ANY, &status, WNOHANG);  // WNOHANG : Non-blocking.
 
-        return;
+    // The child hasn't ended.
+    if (pid == 0) {
+      SPDLOG_DEBUG("The child hasn't ended.");
+      return;
+    } else if (pid == -1) {
+      int error = errno;
+      SPDLOG_DEBUG("Failed to waitpid. Error: {}.", error);
+      if (error == EINTR) {
+        continue;
       }
 
-      // Get the signal id that make child process end.
-      if (WTERMSIG(status) > 0) {
-        SPDLOG_DEBUG("Child process [PID : {}] exited on signal [{}].", pid, WTERMSIG(status));
-      } else {
-        SPDLOG_DEBUG("Child process [PID : {}] exited with error code [{}].", pid, WEXITSTATUS(status));
+      if (error == ECHILD && once) {
+        g_reap = true;
       }
+
+      return;
+    }
+
+    once = true;
+    // Get the signal id that make child process end.
+    if (WTERMSIG(status) > 0) {
+      SPDLOG_DEBUG("Child process [PID : {}] exited on signal [{}].", pid, WTERMSIG(status));
+    } else {
+      SPDLOG_DEBUG("Child process [PID : {}] exited with error code [{}].", pid, WEXITSTATUS(status));
     }
   }
 }

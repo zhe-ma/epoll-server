@@ -50,6 +50,7 @@ private:
 
   bool StartMasterAndWorkers();
   void StartWorkers();
+  void StartWorker();
 
   bool InitAcceptor();
 
