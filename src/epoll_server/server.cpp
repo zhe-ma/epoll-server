@@ -155,6 +155,9 @@ bool Server::StartMasterAndWorkers() {
     // 3. 调用该信号对应的信号处理函数。
     // 4. 信号处理函数返回后，sigsuspend返回，使程序流程继续往下走。
     sigsuspend(&set);  // 阻塞在这里，等待一个信号，此时进程是挂起的，不占用cpu时间，只有收到信号才会被唤醒。
+
+    sleep(1);
+
     SPDLOG_DEBUG("I'm master: {}", getpid());
   }
 

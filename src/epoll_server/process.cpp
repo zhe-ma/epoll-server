@@ -159,20 +159,20 @@ void SignalHandler(int signo, siginfo_t* siginfo, void* ucontext) {
 
   // Parent process should call wait or waitpid to avoid killed child process to be a defunct.
   if (signo == SIGCHLD) {
-    bool once = false;
-    for ( ; ; ) {
-
-      // -1 : Wait any child process.
-      // WNOHANG : Non-blocking.
+    for (; ;) {
       int status = 0;
-      pid_t pid = waitpid(-1, &status, WNOHANG);
+      pid_t pid = waitpid(WAIT_ANY, &status, WNOHANG);  // WNOHANG : Non-blocking.
 
       // The child hasn't ended.
       if (pid == 0) {
         SPDLOG_DEBUG("The child hasn't ended.");
         return;
-      }else if (pid == -1) {
+      } else if (pid == -1) {
         SPDLOG_WARN("Failed to waitpid. Error: {}.", errno);
+        if (errno == EINTR) {
+          continue;
+        }
+
         return;
       }
 

@@ -9,7 +9,7 @@
 
   "process" : {
     "masterWorkerMode" : true,
-    "workerCount" : 2,
+    "workerCount" : 1,
     "daemonMode" : false,
     "masterTitle" : "ServerMaster",
     "workerTitle" : "ServerWoker"
